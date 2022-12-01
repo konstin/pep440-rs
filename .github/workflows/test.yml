@@ -1,0 +1,57 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Install ruff
+        run: |
+          pip install --upgrade pip
+          pip install ruff
+      - name: Ruff
+        run: ruff .
+      - name: Rustfmt
+        run: cargo fmt --all -- --check
+      - name: Clippy (pure rust)
+        run: cargo clippy --tests -- -D warnings
+      - name: Clippy (pyo3)
+        run: cargo clippy --tests --all-features -- -D warnings
+
+  test-rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test
+
+  test-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install pytest
+        run: |
+          pip install --upgrade pip
+          pip install pytest
+      - uses: PyO3/maturin-action@v1
+        with:
+          command: build
+      - name: Install pep440_rs
+        run: pip install pep440_rs --find-links target/wheels
+      - run: pytest

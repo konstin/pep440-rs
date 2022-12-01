@@ -1,0 +1,16 @@
+[project]
+name = "pep440_rs"
+readme = "python/Readme.md"
+
+[build-system]
+requires = ["maturin>=0.14,<0.15"]
+build-backend = "maturin"
+
+[tool.maturin]
+features = ["pyo3"]
+python-source = "python"
+
+[tool.ruff]
+extend-exclude = [
+    "python/pep440_rs/__init__.py"
+]

@@ -1,0 +1,24 @@
+[package]
+name = "pep440_rs"
+version = "0.1.0"
+edition = "2021"
+# Same license as pypa/packaging where the tests are from
+license = "Apache-2.0 OR BSD-2-Clause"
+
+[lib]
+name = "pep440_rs"
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+lazy_static = "1.4.0"
+#pyo3 = { version = "0.17.3", optional = true, features = ["extension-module", "abi3-py37", "multiple-pymethods"] }
+pyo3 = { git = "https://github.com/PyO3/pyo3", branch = "cfg-feature-pyo3", optional = true, features = ["extension-module", "abi3-py37", "multiple-pymethods"] }
+regex = { version = "1.7.0", default-features = false, features = ["std", "perf", "unicode-case", "unicode-perl"] }
+tracing = "0.1.37"
+unicode-width = "0.1.10"
+
+[dev-dependencies]
+indoc = "1.0.7"
+
+[package.metadata.maturin]
+name = "pep440_rs._pep440_rs"
