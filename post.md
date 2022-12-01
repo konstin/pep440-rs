@@ -43,20 +43,21 @@ Two features that would be great to add are the caret operator (`^`) and the til
 Next Up: PEP 508 
 
 [^1]: Well, technically not python as the python interpreter but pypa as the vague group of people who make the packaging PEPs. Python itself didn't even have a concept of package versions at all until `importlib.metadata` introduced optionally reading a version as a string to the standard library, and the language itself still doesn't have a concept of packages but merely one of modules. When you `import foo` it effectively just asks `sys.meta_path` if anyone can import foo, which will check if any location in `sys.path` has a `foo` module, but this has no relation to packaging. If you ask stdlib's `importlib.metadata` for an installed package version, it [really just asks `sys.meta_path` with a different method if anyone optionally wants to tell it about the package version](https://github.com/python/cpython/blob/8af04cdef202364541540ed67e204b71e2e759d0/Lib/importlib/metadata/__init__.py#L362-L413), which by default will just look for `.dist-info` folders in your `sys.path`.
-[^2]: If you ever wondered why wheel metadata is in some archaic e-mail-headers RFC 822 
+[^2]: If you ever wondered why wheel metadata is in some archaic e-mail-headers RFC 822
 
-  <div style="text-align: center">
+    <div style="text-align: center">
 
-  ```
-  STANDARD FOR THE FORMAT OF
+    ```
+    STANDARD FOR THE FORMAT OF
   
-  ARPA INTERNET TEXT MESSAGES
-  ```
+    ARPA INTERNET TEXT MESSAGES
+    ```
 
-  </div>
+    </div>
 
-  that's because it was [picked in 2001](https://peps.python.org/pep-0241/). Even XML 1.0 was [published just 3 years prior](https://www.w3.org/TR/1998/REC-xml-19980210.html). I'm still very much in favor of [migrating to a JSON or TOML format](https://peps.python.org/pep-0566/#json-compatible-metadata) such as `pkg-info.json` or editing `pyproject.toml` similar to what cargo does, but that's for another time.
+    that's because it was [picked in 2001](https://peps.python.org/pep-0241/). Even XML 1.0 was [published just 3 years prior](https://www.w3.org/TR/1998/REC-xml-19980210.html). I'm still very much in favor of [migrating to a JSON or TOML format](https://peps.python.org/pep-0566/#json-compatible-metadata) such as `pkg-info.json` or editing `pyproject.toml` similar to what cargo does, but that's for another time.
 [^3]: I ran this on 2022-11-29 and the queries were
+
     ```sql
     SELECT
       COUNT(*)
@@ -66,7 +67,9 @@ Next Up: PEP 508
       timestamp BETWEEN TIMESTAMP(DATETIME_SUB(CURRENT_DATETIME(), INTERVAL 1 MONTH))
       AND TIMESTAMP(CURRENT_DATETIME())
     ```
+      
     and
+      
     ```sql
     SELECT
       COUNT(*)
@@ -77,14 +80,15 @@ Next Up: PEP 508
       AND TIMESTAMP(CURRENT_DATETIME())
       AND CONTAINS_SUBSTR(file.version, '!')
     ```
+
 [^4]: Blessed be whoever came up with the [bigquery datasets for pypi](https://warehouse.pypa.io/api-reference/bigquery-datasets.html)
 [^5]: E.g. some people want to build `{Major}.{Minor}.{Patch}.dev{YYYY}{MM}{DD}{MonotonicallyIncreasingDailyBuildNumber}` in their CI workflows. Local versions are used to indicate when linux distributions did some downstream packing, so you can directly tell when you're looking at a distro patched install.
 [^6]: I'm still not sure if they provide any benefit over just using alpha versions, but once they behave like normal prereleases their implementation and cognitive overhead is near zero so backwards compatibility is way more significant. Note that semver relies on "alpha", "beta" and "rc" being alphabetically ordered, while we need to make "dev" lowest manually, otoh semver also allows any random stuff for prereleases and uses the same duck-typed logic for comparing them as PEP 440 uses for local versions.
 [^7]: Consider the case where a user adds a library `A` from pypi that has multiple transitive dependencies on `B`, some specifier with preleases in their specifiers and some without. It would be bad for the authors of `A` to work if they couldn't clearly reason which prereleases of `B` might or might not be picked independent of which tool the user uses.
 [^8]: According to the python survey results, those are the two most popular other package managers in use
-    
-  ![Plot showing bars on how much other package managers are being used, with docker, npm, cargo and yarn on top](https://i.imgur.com/b1Jolbk.png)
 
-  RubyGems [states](https://guides.rubygems.org/patterns/) "The RubyGems team urges gem developers to follow the Semantic Versioning standard for their gem’s versions. The RubyGems library itself does not enforce a strict versioning policy, but using an “irrational” policy will only be a disservice to those in the community who use your gems", but i couldn't find any details on what versions and operators are allowed.
+    ![Plot showing bars on how much other package managers are being used, with docker, npm, cargo and yarn on top](https://i.imgur.com/b1Jolbk.png)
 
-  Composer on the other hand is very much like python ([docs](https://getcomposer.org/doc/04-schema.md#version)): "This must follow the format of X.Y.Z or vX.Y.Z with an optional suffix of -dev, -patch (-p), -alpha (-a), -beta (-b) or -RC.", where dev is below alpha. It also seems to allow `1.2.*` but i couldn't find any more documentation on what's allowed and what the semantics are except that they apparently [transform prereleases to a version digit](https://github.com/composer/composer/blob/bd6a5019b3bf5edf13640522796f54accaad789e/src/Composer/Platform/Version.php#L63-L69) 
+    RubyGems [states](https://guides.rubygems.org/patterns/) "The RubyGems team urges gem developers to follow the Semantic Versioning standard for their gem’s versions. The RubyGems library itself does not enforce a strict versioning policy, but using an “irrational” policy will only be a disservice to those in the community who use your gems", but i couldn't find any details on what versions and operators are allowed.
+
+    Composer on the other hand is very much like python ([docs](https://getcomposer.org/doc/04-schema.md#version)): "This must follow the format of X.Y.Z or vX.Y.Z with an optional suffix of -dev, -patch (-p), -alpha (-a), -beta (-b) or -RC.", where dev is below alpha. It also seems to allow `1.2.*` but i couldn't find any more documentation on what's allowed and what the semantics are except that they apparently [transform prereleases to a version digit](https://github.com/composer/composer/blob/bd6a5019b3bf5edf13640522796f54accaad789e/src/Composer/Platform/Version.php#L63-L69) 

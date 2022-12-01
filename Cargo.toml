@@ -1,6 +1,6 @@
 [package]
 name = "pep440_rs"
-version = "0.1.0-alpha.2"
+version = "0.1.0"
 edition = "2021"
 # Same license as pypa/packaging where the tests are from
 license = "Apache-2.0 OR BSD-2-Clause"
