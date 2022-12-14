@@ -975,29 +975,23 @@ mod test {
         assert!(!Version::from_str_star("1.2.3").unwrap().1);
         assert!(Version::from_str_star("1.2.3.*").unwrap().1);
         assert_eq!(
-            Version::from_str_star("1.2.*.4.*").unwrap_err().to_string(),
+            Version::from_str_star("1.2.*.4.*").unwrap_err(),
             "Version `1.2.*.4.*` doesn't match PEP 440 rules"
         );
         assert_eq!(
-            Version::from_str_star("1.0-dev1.*")
-                .unwrap_err()
-                .to_string(),
+            Version::from_str_star("1.0-dev1.*").unwrap_err(),
             "You can't have both a trailing `.*` and a dev version"
         );
         assert_eq!(
-            Version::from_str_star("1.0a1.*").unwrap_err().to_string(),
+            Version::from_str_star("1.0a1.*").unwrap_err(),
             "You can't have both a trailing `.*` and a prerelease version"
         );
         assert_eq!(
-            Version::from_str_star("1.0.post1.*")
-                .unwrap_err()
-                .to_string(),
+            Version::from_str_star("1.0.post1.*").unwrap_err(),
             "You can't have both a trailing `.*` and a post version"
         );
         assert_eq!(
-            Version::from_str_star("1.0+lolwat.*")
-                .unwrap_err()
-                .to_string(),
+            Version::from_str_star("1.0+lolwat.*").unwrap_err(),
             "You can't have both a trailing `.*` and a local version"
         );
     }
