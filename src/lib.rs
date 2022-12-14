@@ -42,14 +42,36 @@
 //!   the version matching needs to catch all sorts of special cases
 #![deny(missing_docs)]
 
-pub use parse::parse_version_specifiers;
 #[cfg(feature = "pyo3")]
 use pyo3::{pymodule, types::PyModule, PyResult, Python};
-pub use types::{LocalSegment, Operator, Pep440Error, PreRelease, Version, VersionSpecifier};
+use std::fmt::{Display, Formatter};
+pub use version::{LocalSegment, Operator, PreRelease, Version};
+pub use version_specifier::{parse_version_specifiers, VersionSpecifier};
 
-mod compare;
-mod parse;
-mod types;
+mod version;
+mod version_specifier;
+
+/// Error with span information (unicode width) inside the parsed line
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct Pep440Error {
+    /// The actual error message
+    pub message: String,
+    /// The string that failed to parse
+    pub line: String,
+    /// First character for underlining (unicode width)
+    pub start: usize,
+    /// Number of characters to underline (unicode width)
+    pub width: usize,
+}
+
+impl Display for Pep440Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Failed to parse version:")?;
+        writeln!(f, "{}", self.line)?;
+        writeln!(f, "{}{}", " ".repeat(self.start), "^".repeat(self.width))?;
+        Ok(())
+    }
+}
 
 #[cfg(feature = "pyo3")]
 #[pymodule]

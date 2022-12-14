@@ -74,9 +74,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.137"
+version = "0.2.138"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc7fcc620a3bff7cdd7a365be3376c97191aeaccc2a603e600951e452615bf89"
+checksum = "db6d7e329c562c5dfab7a46a2afabc8b987ab9a4834c9d1ca04dc54c1546cef8"
 
 [[package]]
 name = "lock_api"
@@ -134,7 +134,7 @@ dependencies = [
 
 [[package]]
 name = "pep440_rs"
-version = "0.1.0-alpha.2"
+version = "0.1.1"
 dependencies = [
  "indoc",
  "lazy_static",
@@ -162,7 +162,7 @@ dependencies = [
 [[package]]
 name = "pyo3"
 version = "0.17.3"
-source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#8fc4d91177b7b75a48164957d13690f124508178"
+source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#cc354538e0d18c267734b6412c5307620ebffa11"
 dependencies = [
  "cfg-if",
  "indoc",
@@ -179,7 +179,7 @@ dependencies = [
 [[package]]
 name = "pyo3-build-config"
 version = "0.17.3"
-source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#8fc4d91177b7b75a48164957d13690f124508178"
+source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#cc354538e0d18c267734b6412c5307620ebffa11"
 dependencies = [
  "once_cell",
  "target-lexicon",
@@ -188,7 +188,7 @@ dependencies = [
 [[package]]
 name = "pyo3-ffi"
 version = "0.17.3"
-source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#8fc4d91177b7b75a48164957d13690f124508178"
+source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#cc354538e0d18c267734b6412c5307620ebffa11"
 dependencies = [
  "libc",
  "pyo3-build-config",
@@ -197,7 +197,7 @@ dependencies = [
 [[package]]
 name = "pyo3-macros"
 version = "0.17.3"
-source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#8fc4d91177b7b75a48164957d13690f124508178"
+source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#cc354538e0d18c267734b6412c5307620ebffa11"
 dependencies = [
  "proc-macro2",
  "pyo3-macros-backend",
@@ -208,7 +208,7 @@ dependencies = [
 [[package]]
 name = "pyo3-macros-backend"
 version = "0.17.3"
-source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#8fc4d91177b7b75a48164957d13690f124508178"
+source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#cc354538e0d18c267734b6412c5307620ebffa11"
 dependencies = [
  "proc-macro2",
  "quote",

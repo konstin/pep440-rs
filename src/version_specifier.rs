@@ -1,139 +1,121 @@
-use crate::types::VersionSpecifier;
-use crate::{LocalSegment, Operator, PreRelease, Version};
+use crate::version::VERSION_RE_INNER;
+use crate::version::{Operator, Version};
+use crate::{version, Pep440Error};
+use lazy_static::lazy_static;
 #[cfg(feature = "pyo3")]
-use pyo3::pymethods;
+use pyo3::{exceptions::PyValueError, pyclass, pymethods, PyResult};
+use regex::Regex;
 use std::cmp::Ordering;
-use std::iter;
+use std::str::FromStr;
 use tracing::warn;
+use unicode_width::UnicodeWidthStr;
 
-/// Compare the release parts of two versions, e.g. `4.3.1` > `4.2`, `1.1.0` == `1.1` and
-/// `1.16` < `1.19`
-fn compare_release(this: &[usize], other: &[usize]) -> Ordering {
-    // "When comparing release segments with different numbers of components, the shorter segment
-    // is padded out with additional zeros as necessary"
-    let iterator: Vec<(&usize, &usize)> = if this.len() < other.len() {
-        this.iter().chain(iter::repeat(&0)).zip(other).collect()
-    } else {
-        this.iter()
-            .zip(other.iter().chain(iter::repeat(&0)))
-            .collect()
-    };
-
-    for (a, b) in iterator {
-        if a != b {
-            return a.cmp(b);
-        }
-    }
-
-    Ordering::Equal
+lazy_static! {
+    /// Matches a python version specifier, such as `>=1.19.a1` or `4.1.*`. Extends the PEP 440 regex
+    static ref VERSION_SPECIFIER_RE: Regex = Regex::new(&format!(
+        r#"(?xi)^(?:\s*)(?P<operator>(~=|==|!=|<=|>=|<|>|===))(?:\s*){}(?:\s*)$"#,
+        VERSION_RE_INNER
+    )).unwrap();
 }
 
-/// Compare the parts attached after the release, given equal release
+/// A version range such such as `>1.2.3`, `<=4!5.6.7-a8.post9.dev0` or `== 4.1.*`. Parse with
+/// `VersionSpecifier::from_str`
 ///
-/// According to <https://peps.python.org/pep-0440/#summary-of-permitted-suffixes-and-relative-ordering>
-/// the order of pre/post-releases is:
-/// .devN, aN, bN, rcN, <no suffix (final)>, .postN
-/// but also, you can have dev/post releases on beta releases, so we make a three stage ordering:
-/// ({dev: 0, a: 1, b: 2, rc: 3, (): 4, post: 5}, <preN>, <postN or None as smallest>, <devN or Max as largest>, <local>)
+/// ```rust
+/// use std::str::FromStr;
+/// use pep440_rs::{Version, VersionSpecifier};
 ///
-/// For post, any number is better than none (so None defaults to None<0), but for dev, no number
-/// is better (so None default to the maximum). For local the Option<Vec<T>> luckily already has the
-/// correct default Ord implementation
-fn sortable_tuple(
-    version: &Version,
-) -> (
-    usize,
-    usize,
-    Option<usize>,
-    usize,
-    Option<Vec<LocalSegment>>,
-) {
-    match (&version.pre, &version.post, &version.dev) {
-        // dev release
-        (None, None, Some(n)) => (0, 0, None, *n, version.local.clone()),
-        // alpha release
-        (Some((PreRelease::Alpha, n)), post, dev) => (
-            1,
-            *n,
-            *post,
-            dev.unwrap_or(usize::MAX),
-            version.local.clone(),
-        ),
-        // beta release
-        (Some((PreRelease::Beta, n)), post, dev) => (
-            2,
-            *n,
-            *post,
-            dev.unwrap_or(usize::MAX),
-            version.local.clone(),
-        ),
-        // alpha release
-        (Some((PreRelease::Rc, n)), post, dev) => (
-            3,
-            *n,
-            *post,
-            dev.unwrap_or(usize::MAX),
-            version.local.clone(),
-        ),
-        // final release
-        (None, None, None) => (4, 0, None, 0, version.local.clone()),
-        // post release
-        (None, Some(post), dev) => (
-            5,
-            0,
-            Some(*post),
-            dev.unwrap_or(usize::MAX),
-            version.local.clone(),
-        ),
+/// let version = Version::from_str("1.19").unwrap();
+/// let version_specifier = VersionSpecifier::from_str("== 1.*").unwrap();
+/// assert!(version_specifier.contains(&version));
+/// ```
+#[cfg_attr(feature = "pyo3", pyclass)]
+#[derive(Eq, PartialEq, Debug, Clone)]
+pub struct VersionSpecifier {
+    /// ~=|==|!=|<=|>=|<|>|===, plus whether the version ended with a star
+    pub(crate) operator: Operator,
+    /// The whole version part behind the operator
+    pub(crate) version: Version,
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl VersionSpecifier {
+    // Since we don't bring FromStr to python
+    /// Parse a PEP 440 version
+    #[new]
+    #[doc(hidden)]
+    pub fn parse(version_specifier: String) -> PyResult<Self> {
+        Self::from_str(&version_specifier).map_err(PyValueError::new_err)
+    }
+
+    #[doc(hidden)]
+    pub fn __contains__(&self, version: &Version) -> bool {
+        self.contains(version)
     }
 }
 
-impl PartialEq<Self> for Version {
-    fn eq(&self, other: &Self) -> bool {
-        self.cmp(other) == Ordering::Equal
-    }
-}
-
-impl Eq for Version {}
-
-impl PartialOrd<Self> for Version {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Version {
-    /// 1.0.dev456 < 1.0a1 < 1.0a2.dev456 < 1.0a12.dev456 < 1.0a12 < 1.0b1.dev456 < 1.0b2
-    /// < 1.0b2.post345.dev456 < 1.0b2.post345 < 1.0b2-346 < 1.0c1.dev456 < 1.0c1 < 1.0rc2 < 1.0c3
-    /// < 1.0 < 1.0.post456.dev34 < 1.0.post456
-    fn cmp(&self, other: &Self) -> Ordering {
-        if self.epoch != other.epoch {
-            return self.epoch.cmp(&other.epoch);
-        }
-
-        match compare_release(&self.release, &other.release) {
-            Ordering::Less => {
-                return Ordering::Less;
-            }
-            Ordering::Equal => {}
-            Ordering::Greater => {
-                return Ordering::Greater;
+impl VersionSpecifier {
+    /// Build from parts, validating that the operator is allowed with that version. The last
+    /// parameter indicates a trailing `.*`, to differentiate between `1.1.*` and `1.1`
+    pub fn new(operator: Operator, version: Version, star: bool) -> Result<Self, String> {
+        // "Local version identifiers are NOT permitted in this version specifier."
+        if let Some(local) = &version.local {
+            if matches!(
+                operator,
+                Operator::GreaterThan
+                    | Operator::GreaterThanEqual
+                    | Operator::LessThan
+                    | Operator::LessThanEqual
+                    | Operator::TildeEqual
+                    | Operator::EqualStar
+                    | Operator::NotEqualStar
+            ) {
+                return Err(format!(
+                    "You can't mix a {} operator with a local version (`+{}`)",
+                    operator,
+                    local
+                        .iter()
+                        .map(|x| x.to_string())
+                        .collect::<Vec<String>>()
+                        .join(".")
+                ));
             }
         }
-        // release is equal, so compare the other parts
-        sortable_tuple(self).cmp(&sortable_tuple(other))
-    }
-}
 
-impl Ord for LocalSegment {
-    fn cmp(&self, other: &Self) -> Ordering {
-        // <https://peps.python.org/pep-0440/#local-version-identifiers>
-        match (self, other) {
-            (Self::Number(n1), Self::Number(n2)) => n1.cmp(n2),
-            (Self::String(s1), Self::String(s2)) => s1.cmp(s2),
-            (Self::Number(_), Self::String(_)) => Ordering::Greater,
-            (Self::String(_), Self::Number(_)) => Ordering::Less,
+        // Check if there are star versions and if so, switch operator to star version
+        let operator = if star {
+            match operator {
+                Operator::Equal => Operator::EqualStar,
+                Operator::NotEqual => Operator::NotEqualStar,
+                other => {
+                    return Err(format!(
+                        "Operator {} must not be used in version ending with a star",
+                        other
+                    ))
+                }
+            }
+        } else {
+            operator
+        };
+
+        if operator == Operator::TildeEqual && version.release.len() < 2 {
+            return Err(
+                "The ~= operator requires at least two parts in the release version".to_string(),
+            );
         }
+
+        Ok(Self { operator, version })
+    }
+
+    /// Get the operator, e.g. `>=` in `>= 2.0.0`
+    pub fn operator(&self) -> &Operator {
+        &self.operator
+    }
+
+    /// Get the version, e.g. `<=` in `<= 2.0.0`
+    pub fn version(&self) -> &Version {
+        &self.version
     }
 }
 
@@ -215,7 +197,7 @@ impl VersionSpecifier {
             Operator::GreaterThanEqual => Self::greater_than(&this, &other) || other >= this,
             Operator::LessThan => {
                 Self::less_than(&this, &other)
-                    && !(compare_release(&this.release, &other.release) == Ordering::Equal
+                    && !(version::compare_release(&this.release, &other.release) == Ordering::Equal
                         && other.any_prerelease())
             }
             Operator::LessThanEqual => Self::less_than(&this, &other) || other <= this,
@@ -235,7 +217,7 @@ impl VersionSpecifier {
         // not match 3.1.dev0, but should match 3.0.dev0).
         if !this.any_prerelease()
             && other.is_pre()
-            && compare_release(&this.release, &other.release) == Ordering::Equal
+            && version::compare_release(&this.release, &other.release) == Ordering::Equal
         {
             return false;
         }
@@ -248,7 +230,7 @@ impl VersionSpecifier {
             return true;
         }
 
-        if compare_release(&this.release, &other.release) == Ordering::Equal {
+        if version::compare_release(&this.release, &other.release) == Ordering::Equal {
             // This special case is here so that, unless the specifier itself
             // includes is a post-release version, that we do not accept
             // post-release versions for the version mentioned in the specifier
@@ -267,9 +249,61 @@ impl VersionSpecifier {
     }
 }
 
+impl FromStr for VersionSpecifier {
+    type Err = String;
+
+    /// Parses a version such as `>= 1.19`, `== 1.1.*`,`~=1.0+abc.5` or `<=1!2012.2`
+    fn from_str(spec: &str) -> Result<Self, Self::Err> {
+        let captures = VERSION_SPECIFIER_RE
+            .captures(spec)
+            .ok_or_else(|| format!("Version specifier `{}` doesn't match PEP 440 rules", spec))?;
+        let (version, star) = Version::parse_impl(&captures)?;
+        // operator but we don't know yet if it has a star
+        let operator = Operator::from_str(&captures["operator"])?;
+        let version_specifier = VersionSpecifier::new(operator, version, star)?;
+        Ok(version_specifier)
+    }
+}
+
+/// Parses a list of specifiers such as `>= 1.0, != 1.3.*, < 2.0`
+///
+/// ```rust
+/// use std::str::FromStr;
+/// use pep440_rs::{parse_version_specifiers, Version};
+///
+/// let version = Version::from_str("1.19").unwrap();
+/// let version_specifiers = parse_version_specifiers(">=1.16, <2.0").unwrap();
+/// assert!(version_specifiers.iter().all(|specifier| specifier.contains(&version)));
+/// ```
+pub fn parse_version_specifiers(spec: &str) -> Result<Vec<VersionSpecifier>, Pep440Error> {
+    let mut version_ranges = Vec::new();
+    let mut start: usize = 0;
+    let separator = ",";
+    for version_range_spec in spec.split(separator) {
+        match VersionSpecifier::from_str(version_range_spec) {
+            Err(err) => {
+                return Err(Pep440Error {
+                    message: err,
+                    line: spec.to_string(),
+                    start,
+                    width: version_range_spec.width(),
+                });
+            }
+            Ok(version_range) => {
+                version_ranges.push(version_range);
+            }
+        }
+        start += version_range_spec.width();
+        start += separator.width();
+    }
+    Ok(version_ranges)
+}
+
 #[cfg(test)]
 mod test {
-    use crate::{Version, VersionSpecifier};
+    use crate::version_specifier::parse_version_specifiers;
+    use crate::{Operator, Version, VersionSpecifier};
+    use indoc::indoc;
     use std::cmp::Ordering;
     use std::str::FromStr;
 
@@ -754,6 +788,231 @@ mod test {
                 version,
                 specifier
             );
+        }
+    }
+
+    #[test]
+    fn test_parse_version_specifiers() {
+        let result = parse_version_specifiers("~= 0.9, >= 1.0, != 1.3.4.*, < 2.0").unwrap();
+        assert_eq!(
+            result,
+            [
+                VersionSpecifier {
+                    operator: Operator::TildeEqual,
+                    version: Version {
+                        epoch: 0,
+                        release: vec![0, 9],
+                        pre: None,
+                        post: None,
+                        dev: None,
+                        local: None
+                    }
+                },
+                VersionSpecifier {
+                    operator: Operator::GreaterThanEqual,
+                    version: Version {
+                        epoch: 0,
+                        release: vec![1, 0],
+                        pre: None,
+                        post: None,
+                        dev: None,
+                        local: None
+                    }
+                },
+                VersionSpecifier {
+                    operator: Operator::NotEqualStar,
+                    version: Version {
+                        epoch: 0,
+                        release: vec![1, 3, 4],
+                        pre: None,
+                        post: None,
+                        dev: None,
+                        local: None
+                    }
+                },
+                VersionSpecifier {
+                    operator: Operator::LessThan,
+                    version: Version {
+                        epoch: 0,
+                        release: vec![2, 0],
+                        pre: None,
+                        post: None,
+                        dev: None,
+                        local: None
+                    }
+                }
+            ]
+        );
+    }
+
+    #[test]
+    fn test_parse_error() {
+        let result = parse_version_specifiers("~= 0.9, %‍= 1.0, != 1.3.4.*");
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            indoc! {r#"
+                Failed to parse version:
+                ~= 0.9, %‍= 1.0, != 1.3.4.*
+                       ^^^^^^^
+            "#}
+        );
+    }
+
+    #[test]
+    fn test_non_star_after_star() {
+        let result = parse_version_specifiers("== 0.9.*.1");
+        assert_eq!(
+            result.unwrap_err().message,
+            "Version specifier `== 0.9.*.1` doesn't match PEP 440 rules"
+        );
+    }
+
+    #[test]
+    fn test_star_wrong_operator() {
+        let result = parse_version_specifiers(">= 0.9.1.*");
+        assert_eq!(
+            result.unwrap_err().message,
+            "Operator >= must not be used in version ending with a star"
+        );
+    }
+
+    #[test]
+    fn test_regex_mismatch() {
+        let result = parse_version_specifiers("blergh");
+        assert_eq!(
+            result.unwrap_err().message,
+            "Version specifier `blergh` doesn't match PEP 440 rules"
+        );
+    }
+
+    /// <https://github.com/pypa/packaging/blob/e184feef1a28a5c574ec41f5c263a3a573861f5a/tests/test_specifiers.py#L44-L84>
+    #[test]
+    fn test_invalid_specifier() {
+        let specifiers = [
+            // Operator-less specifier
+            ("2.0", None),
+            // Invalid operator
+            ("=>2.0", None),
+            // Version-less specifier
+            ("==", None),
+            // Local segment on operators which don't support them
+            (
+                "~=1.0+5",
+                Some("You can't mix a ~= operator with a local version (`+5`)"),
+            ),
+            (
+                ">=1.0+deadbeef",
+                Some("You can't mix a >= operator with a local version (`+deadbeef`)"),
+            ),
+            (
+                "<=1.0+abc123",
+                Some("You can't mix a <= operator with a local version (`+abc123`)"),
+            ),
+            (
+                ">1.0+watwat",
+                Some("You can't mix a > operator with a local version (`+watwat`)"),
+            ),
+            (
+                "<1.0+1.0",
+                Some("You can't mix a < operator with a local version (`+1.0`)"),
+            ),
+            // Prefix matching on operators which don't support them
+            (
+                "~=1.0.*",
+                Some("Operator ~= must not be used in version ending with a star"),
+            ),
+            (
+                ">=1.0.*",
+                Some("Operator >= must not be used in version ending with a star"),
+            ),
+            (
+                "<=1.0.*",
+                Some("Operator <= must not be used in version ending with a star"),
+            ),
+            (
+                ">1.0.*",
+                Some("Operator > must not be used in version ending with a star"),
+            ),
+            (
+                "<1.0.*",
+                Some("Operator < must not be used in version ending with a star"),
+            ),
+            // Combination of local and prefix matching on operators which do
+            // support one or the other
+            (
+                "==1.0.*+5",
+                Some("Version specifier `==1.0.*+5` doesn't match PEP 440 rules"),
+            ),
+            (
+                "!=1.0.*+deadbeef",
+                Some("Version specifier `!=1.0.*+deadbeef` doesn't match PEP 440 rules"),
+            ),
+            // Prefix matching cannot be used with a pre-release, post-release,
+            // dev or local version
+            (
+                "==2.0a1.*",
+                Some("You can't have both a trailing `.*` and a prerelease version"),
+            ),
+            (
+                "!=2.0a1.*",
+                Some("You can't have both a trailing `.*` and a prerelease version"),
+            ),
+            (
+                "==2.0.post1.*",
+                Some("You can't have both a trailing `.*` and a post version"),
+            ),
+            (
+                "!=2.0.post1.*",
+                Some("You can't have both a trailing `.*` and a post version"),
+            ),
+            (
+                "==2.0.dev1.*",
+                Some("You can't have both a trailing `.*` and a dev version"),
+            ),
+            (
+                "!=2.0.dev1.*",
+                Some("You can't have both a trailing `.*` and a dev version"),
+            ),
+            (
+                "==1.0+5.*",
+                Some("You can't have both a trailing `.*` and a local version"),
+            ),
+            (
+                "!=1.0+deadbeef.*",
+                Some("You can't have both a trailing `.*` and a local version"),
+            ),
+            // Prefix matching must appear at the end
+            (
+                "==1.0.*.5",
+                Some("Version specifier `==1.0.*.5` doesn't match PEP 440 rules"),
+            ),
+            // Compatible operator requires 2 digits in the release operator
+            (
+                "~=1",
+                Some("The ~= operator requires at least two parts in the release version"),
+            ),
+            // Cannot use a prefix matching after a .devN version
+            (
+                "==1.0.dev1.*",
+                Some("You can't have both a trailing `.*` and a dev version"),
+            ),
+            (
+                "!=1.0.dev1.*",
+                Some("You can't have both a trailing `.*` and a dev version"),
+            ),
+        ];
+        for (specifier, error) in specifiers {
+            if let Some(error) = error {
+                assert_eq!(VersionSpecifier::from_str(specifier).unwrap_err(), error)
+            } else {
+                assert_eq!(
+                    VersionSpecifier::from_str(specifier).unwrap_err(),
+                    format!(
+                        "Version specifier `{}` doesn't match PEP 440 rules",
+                        specifier
+                    )
+                )
+            }
         }
     }
 }
