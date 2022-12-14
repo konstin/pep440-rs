@@ -11,3 +11,7 @@ def test_pep440():
     assert VersionSpecifier(">=1.0").contains(Version("1.1a1"))
     assert not VersionSpecifier(">=1.1").contains(Version("1.1a1"))
     assert Version("2.0") in VersionSpecifier("==2")
+
+def test_normalization():
+    assert str(Version("1.19-alpha.1")) == "1.19a1"
+    assert str(VersionSpecifier(" >=1.19-alpha.1 ")) == ">= 1.19a1"

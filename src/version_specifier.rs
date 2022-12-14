@@ -1,11 +1,12 @@
 use crate::version::VERSION_RE_INNER;
-use crate::version::{Operator, Version};
-use crate::{version, Pep440Error};
+use crate::{version, Operator, Pep440Error, Version};
 use lazy_static::lazy_static;
 #[cfg(feature = "pyo3")]
 use pyo3::{exceptions::PyValueError, pyclass, pymethods, PyResult};
 use regex::Regex;
 use std::cmp::Ordering;
+use std::fmt::Display;
+use std::fmt::Formatter;
 use std::str::FromStr;
 use tracing::warn;
 use unicode_width::UnicodeWidthStr;
@@ -44,14 +45,18 @@ impl VersionSpecifier {
     // Since we don't bring FromStr to python
     /// Parse a PEP 440 version
     #[new]
-    #[doc(hidden)]
     pub fn parse(version_specifier: String) -> PyResult<Self> {
         Self::from_str(&version_specifier).map_err(PyValueError::new_err)
     }
 
-    #[doc(hidden)]
+    /// Whether the version fulfills the specifier
     pub fn __contains__(&self, version: &Version) -> bool {
         self.contains(version)
+    }
+
+    /// Returns the normalized representation
+    pub fn __str__(&self) -> String {
+        self.to_string()
     }
 }
 
@@ -262,6 +267,12 @@ impl FromStr for VersionSpecifier {
         let operator = Operator::from_str(&captures["operator"])?;
         let version_specifier = VersionSpecifier::new(operator, version, star)?;
         Ok(version_specifier)
+    }
+}
+
+impl Display for VersionSpecifier {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {}", self.operator, self.version)
     }
 }
 

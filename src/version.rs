@@ -301,9 +301,14 @@ impl Version {
     /// Parse a PEP 440 version optionally ending with `.*`
     #[cfg(feature = "pyo3")]
     #[staticmethod]
-    #[doc(hidden)]
     pub fn parse_star(version_specifier: String) -> PyResult<(Self, bool)> {
         Self::from_str_star(&version_specifier).map_err(PyValueError::new_err)
+    }
+
+    /// Returns the normalized representation
+    #[cfg(feature = "pyo3")]
+    pub fn __str__(&self) -> String {
+        self.to_string()
     }
 
     /// Whether this is an alpha/beta/rc or dev version
