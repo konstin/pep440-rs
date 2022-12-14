@@ -166,6 +166,44 @@ impl FromStr for Version {
     }
 }
 
+/// Returns the parsed the version digits and whether they end with a start
+/// "1.2.3" -> [1,2,3], false
+/// "1.2.3.*" -> [1,2,3], true
+/// "1.2.3.*.*" -> [1,2,3], true
+/// "1.2.*.4.*" -> err
+fn parse_release_star(release_str: &str) -> Result<(Vec<usize>, bool), String> {
+    let mut release_iter = release_str.split('.').into_iter().enumerate().peekable();
+    let mut release = Vec::new();
+
+    while let Some((index, entry)) = release_iter.peek().cloned() {
+        if entry == "*" {
+            break;
+        } else {
+            release_iter.next();
+        }
+
+        let number = entry
+            .parse::<usize>()
+            .map_err(|err| format!("Couldn't parse part {} of release: {}", index + 1, err))?;
+        release.push(number);
+    }
+
+    // Check if there are star versions and if so, switch operator to star version
+    if let Some((first_star_index, _)) = release_iter.peek().cloned() {
+        if let Some((non_star_index, _)) = release_iter.find(|(_, entry)| *entry != "*") {
+            return Err(format!(
+                "A star (`*`) in the version (at position {}) must not be followed by a non-star (at position {})",
+                first_star_index + 1,
+                non_star_index + 1
+            ));
+        }
+
+        Ok((release, true))
+    } else {
+        Ok((release, false))
+    }
+}
+
 impl FromStr for VersionSpecifier {
     type Err = String;
 
@@ -183,41 +221,18 @@ impl FromStr for VersionSpecifier {
             .name("release")
             // Should be forbidden by the regex
             .ok_or_else(|| "No release in version".to_string())?
-            .as_str()
-            .split('.')
-            .map(ToString::to_string)
-            .collect::<Vec<String>>();
-
-        let mut release_iter = release_str.iter().enumerate().peekable();
-        let mut release = Vec::new();
-
-        while let Some((index, entry)) = release_iter.peek().cloned() {
-            if *entry == "*" {
-                break;
-            } else {
-                release_iter.next();
-            }
-
-            let number = entry
-                .parse::<usize>()
-                .map_err(|err| format!("Couldn't parse part {} of release: {}", index + 1, err))?;
-            release.push(number);
-        }
+            .as_str();
+        let (release, star) = parse_release_star(release_str)?;
 
         // Check if there are star versions and if so, switch operator to star version
-        let operator = if let Some((first_star_index, _)) = release_iter.peek().cloned() {
-            if let Some((non_star_index, _)) = release_iter.find(|(_, entry)| *entry != "*") {
-                return Err(format!("A star (`*`) in the version (at position {}) must not be followed by a non-star (at position {})", first_star_index + 1, non_star_index + 1));
-            }
-
+        let operator = if star {
             match base_operator {
                 Operator::Equal => Operator::EqualStar,
                 Operator::NotEqual => Operator::NotEqualStar,
                 other => {
                     return Err(format!(
-                        "Operator {} must not be used with a star in the version (at position {})",
-                        other,
-                        first_star_index + 1
+                        "Operator {} must not be used in version ending with a star",
+                        other
                     ))
                 }
             }
@@ -661,7 +676,7 @@ mod tests {
         let result = parse_version_specifiers(">= 0.9.1.*");
         assert_eq!(
             result.unwrap_err().message,
-            "Operator >= must not be used with a star in the version (at position 4)"
+            "Operator >= must not be used in version ending with a star"
         );
     }
 
@@ -701,7 +716,7 @@ mod tests {
             // Local segment on operators which don't support them
             (
                 "~=1.0+5",
-                Some("You can't mix a < operator with a local version (`+5`)"),
+                Some("You can't mix a ~= operator with a local version (`+5`)"),
             ),
             (
                 ">=1.0+deadbeef",
@@ -709,36 +724,36 @@ mod tests {
             ),
             (
                 "<=1.0+abc123",
-                Some("You can't mix a > operator with a local version (`+abc123`)"),
+                Some("You can't mix a <= operator with a local version (`+abc123`)"),
             ),
             (
                 ">1.0+watwat",
-                Some("You can't mix a >= operator with a local version (`+watwat`)"),
+                Some("You can't mix a > operator with a local version (`+watwat`)"),
             ),
             (
                 "<1.0+1.0",
-                Some("You can't mix a <= operator with a local version (`+1.0`)"),
+                Some("You can't mix a < operator with a local version (`+1.0`)"),
             ),
             // Prefix matching on operators which don't support them
             (
                 "~=1.0.*",
-                Some("Operator < must not be used with a star in the version (at position 3)"),
+                Some("Operator ~= must not be used in version ending with a star"),
             ),
             (
                 ">=1.0.*",
-                Some("Operator >= must not be used with a star in the version (at position 3)"),
+                Some("Operator >= must not be used in version ending with a star"),
             ),
             (
                 "<=1.0.*",
-                Some("Operator > must not be used with a star in the version (at position 3)"),
+                Some("Operator <= must not be used in version ending with a star"),
             ),
             (
                 ">1.0.*",
-                Some("Operator >= must not be used with a star in the version (at position 3)"),
+                Some("Operator > must not be used in version ending with a star"),
             ),
             (
                 "<1.0.*",
-                Some("Operator <= must not be used with a star in the version (at position 3)"),
+                Some("Operator < must not be used in version ending with a star"),
             ),
             // Combination of local and prefix matching on operators which do
             // support one or the other
@@ -748,7 +763,7 @@ mod tests {
             ),
             (
                 "!=1.0.*+deadbeef",
-                Some("You can't mix a ~= operator with a local version (`+deadbeef`)"),
+                Some("You can't mix a != operator with a local version (`+deadbeef`)"),
             ),
             // Prefix matching cannot be used with a pre-release, post-release,
             // dev or local version

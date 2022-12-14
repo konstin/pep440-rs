@@ -72,13 +72,13 @@ impl Display for Operator {
             Operator::Equal => "==",
             Operator::EqualStar => "==",
             #[allow(deprecated)]
-            Operator::ExactEqual => "!=",
+            Operator::ExactEqual => "===",
             Operator::NotEqual => "!=",
-            Operator::NotEqualStar => "~=",
-            Operator::TildeEqual => "<",
-            Operator::LessThan => "<=",
-            Operator::LessThanEqual => ">",
-            Operator::GreaterThan => ">=",
+            Operator::NotEqualStar => "!=",
+            Operator::TildeEqual => "~=",
+            Operator::LessThan => "<",
+            Operator::LessThanEqual => "<=",
+            Operator::GreaterThan => ">",
             Operator::GreaterThanEqual => ">=",
         };
 
@@ -222,18 +222,15 @@ pub struct Version {
     pub local: Option<Vec<LocalSegment>>,
 }
 
-#[cfg(feature = "pyo3")]
-#[pymethods]
+#[cfg_attr(feature = "pyo3", pymethods)]
 impl Version {
     /// Parses a PEP 440 version string
+    #[cfg(feature = "pyo3")]
     #[new]
     pub fn parse(version: String) -> PyResult<Self> {
         Self::from_str(&version).map_err(PyValueError::new_err)
     }
-}
 
-#[cfg_attr(feature = "pyo3", pymethods)]
-impl Version {
     /// Whether this is an alpha/beta/rc or dev version
     pub fn any_prerelease(&self) -> bool {
         self.is_pre() || self.is_dev()
@@ -258,7 +255,8 @@ impl Version {
     pub fn is_local(&self) -> bool {
         self.local.is_some()
     }
-
+}
+impl Version {
     /// For PEP 440 specifier matching: "Except where specifically noted below, local version
     /// identifiers MUST NOT be permitted in version specifiers, and local version labels MUST be
     /// ignored entirely when checking if candidate versions match a given version specifier."
