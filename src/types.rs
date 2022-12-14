@@ -110,6 +110,7 @@ pub struct VersionSpecifier {
 #[pymethods]
 impl VersionSpecifier {
     // Since we don't bring FromStr to python
+    /// Parse a PEP 440 version
     #[new]
     #[doc(hidden)]
     pub fn parse(version_specifier: String) -> PyResult<Self> {
@@ -123,8 +124,9 @@ impl VersionSpecifier {
 }
 
 impl VersionSpecifier {
-    /// Build from parts, validating that the operator is allowed with that version
-    pub fn new(operator: Operator, version: Version) -> Result<Self, String> {
+    /// Build from parts, validating that the operator is allowed with that version. The last
+    /// parameter indicates a trailing `.*`, to differentiate between `1.1.*` and `1.1`
+    pub fn new(operator: Operator, version: Version, star: bool) -> Result<Self, String> {
         // "Local version identifiers are NOT permitted in this version specifier."
         if let Some(local) = &version.local {
             if matches!(
@@ -148,6 +150,22 @@ impl VersionSpecifier {
                 ));
             }
         }
+
+        // Check if there are star versions and if so, switch operator to star version
+        let operator = if star {
+            match operator {
+                Operator::Equal => Operator::EqualStar,
+                Operator::NotEqual => Operator::NotEqualStar,
+                other => {
+                    return Err(format!(
+                        "Operator {} must not be used in version ending with a star",
+                        other
+                    ))
+                }
+            }
+        } else {
+            operator
+        };
 
         if operator == Operator::TildeEqual && version.release.len() < 2 {
             return Err(
@@ -231,6 +249,15 @@ impl Version {
         Self::from_str(&version).map_err(PyValueError::new_err)
     }
 
+    // Maps the error type
+    /// Parse a PEP 440 version optionally ending with `.*`
+    #[cfg(feature = "pyo3")]
+    #[staticmethod]
+    #[doc(hidden)]
+    pub fn parse_star(version_specifier: String) -> PyResult<(Self, bool)> {
+        Self::from_str_star(&version_specifier).map_err(PyValueError::new_err)
+    }
+
     /// Whether this is an alpha/beta/rc or dev version
     pub fn any_prerelease(&self) -> bool {
         self.is_pre() || self.is_dev()
@@ -256,6 +283,7 @@ impl Version {
         self.local.is_some()
     }
 }
+
 impl Version {
     /// For PEP 440 specifier matching: "Except where specifically noted below, local version
     /// identifiers MUST NOT be permitted in version specifiers, and local version labels MUST be

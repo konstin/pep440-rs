@@ -12,7 +12,7 @@ const VERSION_RE_INNER: &str = r#"
 (?:
     (?:v?)                                            # <https://peps.python.org/pep-0440/#preceding-v-character>
     (?:(?P<epoch>[0-9]+)!)?                           # epoch
-    (?P<release>[0-9*]+(?:\.[0-9*]+)*)                # release segment, this now allows for * versions which are more lenient than necessary so we can put better error messages in the code
+    (?P<release>[0-9*]+(?:\.[0-9]+)*)                 # release segment, this now allows for * versions which are more lenient than necessary so we can put better error messages in the code
     (?P<pre_field>                                    # pre-release
         [-_\.]?
         (?P<pre_name>(a|b|c|rc|alpha|beta|pre|preview))
@@ -37,6 +37,7 @@ const VERSION_RE_INNER: &str = r#"
     )?
 )
 (?:\+(?P<local>[a-z0-9]+(?:[-_\.][a-z0-9]+)*))?       # local version
+(?P<trailing_dot_star>\.\*)?                          # allow for version matching `.*`
 "#;
 
 lazy_static! {
@@ -52,20 +53,9 @@ lazy_static! {
     )).unwrap();
 }
 
-/// Extract for reusability around star/non-star
+/// Extracted for reusability around star/non-star
 #[allow(clippy::type_complexity)]
-fn parse_version_modifier(
-    captures: &Captures,
-) -> Result<
-    (
-        usize,
-        Option<(PreRelease, usize)>,
-        Option<usize>,
-        Option<usize>,
-        Option<Vec<LocalSegment>>,
-    ),
-    String,
-> {
+fn parse_version_impl(captures: &Captures) -> Result<(Version, bool), String> {
     let number_field = |field_name| {
         if let Some(field_str) = captures.name(field_name) {
             match field_str.as_str().parse::<usize>() {
@@ -128,79 +118,73 @@ fn parse_version_modifier(
             })
             .collect()
     });
-    Ok((epoch, pre, post, dev, local))
+    let release = captures
+        .name("release")
+        // Should be forbidden by the regex
+        .ok_or_else(|| "No release in version".to_string())?
+        .as_str()
+        .split('.')
+        .map(|segment| segment.parse::<usize>().map_err(|err| err.to_string()))
+        .collect::<Result<Vec<usize>, String>>()?;
+    let star = captures.name("trailing_dot_star").is_some();
+    if star {
+        if pre.is_some() {
+            return Err("You can't have both a trailing `.*` and a prerelease version".to_string());
+        }
+        if post.is_some() {
+            return Err("You can't have both a trailing `.*` and a post version".to_string());
+        }
+        if dev.is_some() {
+            return Err("You can't have both a trailing `.*` and a dev version".to_string());
+        }
+        if local.is_some() {
+            return Err("You can't have both a trailing `.*` and a local version".to_string());
+        }
+    }
+
+    let version = Version {
+        epoch,
+        release,
+        pre,
+        post,
+        dev,
+        local,
+    };
+    Ok((version, star))
 }
 
 impl FromStr for Version {
     type Err = String;
 
     /// Parses a version such as `1.19`, `1.0a1`,`1.0+abc.5` or `1!2012.2`
-    fn from_str(spec: &str) -> Result<Self, Self::Err> {
+    ///
+    /// Note that this variant doesn't allow the version to end with a star, see
+    /// [Self::from_str_star] if you want to parse versions for specifiers
+    fn from_str(version: &str) -> Result<Self, Self::Err> {
         let captures = VERSION_RE
-            .captures(spec)
-            .ok_or_else(|| format!("Version `{}` doesn't match PEP 440 rules", spec))?;
-        let (epoch, pre, post, dev, local) = parse_version_modifier(&captures)?;
-        let release = captures
-            .name("release")
-            // Should be forbidden by the regex
-            .ok_or_else(|| "No release in version".to_string())?
-            .as_str()
-            .split('.')
-            .map(|segment| {
-                if segment == "*" {
-                    Err("A star (`*`) must not be used in a fixed version".to_string())
-                } else {
-                    segment.parse::<usize>().map_err(|err| err.to_string())
-                }
-            })
-            .collect::<Result<Vec<usize>, String>>()?;
-
-        Ok(Version {
-            epoch,
-            release,
-            pre,
-            post,
-            dev,
-            local,
-        })
+            .captures(version)
+            .ok_or_else(|| format!("Version `{}` doesn't match PEP 440 rules", version))?;
+        let (version, star) = parse_version_impl(&captures)?;
+        if star {
+            return Err("A star (`*`) must not be used in a fixed version (use `Version::from_string_star` otherwise)".to_string());
+        }
+        Ok(version)
     }
 }
 
-/// Returns the parsed the version digits and whether they end with a start
-/// "1.2.3" -> [1,2,3], false
-/// "1.2.3.*" -> [1,2,3], true
-/// "1.2.3.*.*" -> [1,2,3], true
-/// "1.2.*.4.*" -> err
-fn parse_release_star(release_str: &str) -> Result<(Vec<usize>, bool), String> {
-    let mut release_iter = release_str.split('.').into_iter().enumerate().peekable();
-    let mut release = Vec::new();
-
-    while let Some((index, entry)) = release_iter.peek().cloned() {
-        if entry == "*" {
-            break;
-        } else {
-            release_iter.next();
-        }
-
-        let number = entry
-            .parse::<usize>()
-            .map_err(|err| format!("Couldn't parse part {} of release: {}", index + 1, err))?;
-        release.push(number);
-    }
-
-    // Check if there are star versions and if so, switch operator to star version
-    if let Some((first_star_index, _)) = release_iter.peek().cloned() {
-        if let Some((non_star_index, _)) = release_iter.find(|(_, entry)| *entry != "*") {
-            return Err(format!(
-                "A star (`*`) in the version (at position {}) must not be followed by a non-star (at position {})",
-                first_star_index + 1,
-                non_star_index + 1
-            ));
-        }
-
-        Ok((release, true))
-    } else {
-        Ok((release, false))
+impl Version {
+    /// Like [Self::from_str], but also allows the version to end with a star and returns whether it
+    /// did. This variant is for use in specifiers.
+    ///  * `1.2.3` -> false
+    ///  * `1.2.3.*` -> true
+    ///  * `1.2.*.4` -> err
+    ///  * `1.0-dev1.*` -> err
+    pub fn from_str_star(version: &str) -> Result<(Self, bool), String> {
+        let captures = VERSION_RE
+            .captures(version)
+            .ok_or_else(|| format!("Version `{}` doesn't match PEP 440 rules", version))?;
+        let (version, star) = parse_version_impl(&captures)?;
+        Ok((version, star))
     }
 }
 
@@ -212,44 +196,10 @@ impl FromStr for VersionSpecifier {
         let captures = VERSION_SPECIFIER_RE
             .captures(spec)
             .ok_or_else(|| format!("Version specifier `{}` doesn't match PEP 440 rules", spec))?;
-        let (epoch, pre, post, dev, local) = parse_version_modifier(&captures)?;
-
+        let (version, star) = parse_version_impl(&captures)?;
         // operator but we don't know yet if it has a star
-        let base_operator = Operator::from_str(&captures["operator"])?;
-
-        let release_str = captures
-            .name("release")
-            // Should be forbidden by the regex
-            .ok_or_else(|| "No release in version".to_string())?
-            .as_str();
-        let (release, star) = parse_release_star(release_str)?;
-
-        // Check if there are star versions and if so, switch operator to star version
-        let operator = if star {
-            match base_operator {
-                Operator::Equal => Operator::EqualStar,
-                Operator::NotEqual => Operator::NotEqualStar,
-                other => {
-                    return Err(format!(
-                        "Operator {} must not be used in version ending with a star",
-                        other
-                    ))
-                }
-            }
-        } else {
-            base_operator
-        };
-
-        let version = Version {
-            epoch,
-            release,
-            pre,
-            post,
-            dev,
-            local,
-        };
-
-        let version_specifier = VersionSpecifier::new(operator, version)?;
+        let operator = Operator::from_str(&captures["operator"])?;
+        let version_specifier = VersionSpecifier::new(operator, version, star)?;
         Ok(version_specifier)
     }
 }
@@ -667,7 +617,7 @@ mod tests {
         let result = parse_version_specifiers("== 0.9.*.1");
         assert_eq!(
             result.unwrap_err().message,
-            "A star (`*`) in the version (at position 3) must not be followed by a non-star (at position 4)"
+            "Version specifier `== 0.9.*.1` doesn't match PEP 440 rules"
         );
     }
 
@@ -685,7 +635,7 @@ mod tests {
         let result = Version::from_str("0.9.1.*");
         assert_eq!(
             result.unwrap_err(),
-            "A star (`*`) must not be used in a fixed version"
+            "A star (`*`) must not be used in a fixed version (use `Version::from_string_star` otherwise)"
         );
     }
 
@@ -759,29 +709,65 @@ mod tests {
             // support one or the other
             (
                 "==1.0.*+5",
-                Some("You can't mix a == operator with a local version (`+5`)"),
+                Some("Version specifier `==1.0.*+5` doesn't match PEP 440 rules"),
             ),
             (
                 "!=1.0.*+deadbeef",
-                Some("You can't mix a != operator with a local version (`+deadbeef`)"),
+                Some("Version specifier `!=1.0.*+deadbeef` doesn't match PEP 440 rules"),
             ),
             // Prefix matching cannot be used with a pre-release, post-release,
             // dev or local version
-            ("==2.0a1.*", None),
-            ("!=2.0a1.*", None),
-            ("==2.0.post1.*", None),
-            ("!=2.0.post1.*", None),
-            ("==2.0.dev1.*", None),
-            ("!=2.0.dev1.*", None),
-            ("==1.0+5.*", None),
-            ("!=1.0+deadbeef.*", None),
+            (
+                "==2.0a1.*",
+                Some("You can't have both a trailing `.*` and a prerelease version"),
+            ),
+            (
+                "!=2.0a1.*",
+                Some("You can't have both a trailing `.*` and a prerelease version"),
+            ),
+            (
+                "==2.0.post1.*",
+                Some("You can't have both a trailing `.*` and a post version"),
+            ),
+            (
+                "!=2.0.post1.*",
+                Some("You can't have both a trailing `.*` and a post version"),
+            ),
+            (
+                "==2.0.dev1.*",
+                Some("You can't have both a trailing `.*` and a dev version"),
+            ),
+            (
+                "!=2.0.dev1.*",
+                Some("You can't have both a trailing `.*` and a dev version"),
+            ),
+            (
+                "==1.0+5.*",
+                Some("You can't have both a trailing `.*` and a local version"),
+            ),
+            (
+                "!=1.0+deadbeef.*",
+                Some("You can't have both a trailing `.*` and a local version"),
+            ),
             // Prefix matching must appear at the end
-            ("==1.0.*.5", Some("A star (`*`) in the version (at position 3) must not be followed by a non-star (at position 4)")),
+            (
+                "==1.0.*.5",
+                Some("Version specifier `==1.0.*.5` doesn't match PEP 440 rules"),
+            ),
             // Compatible operator requires 2 digits in the release operator
-            ("~=1", Some("The ~= operator requires at least two parts in the release version")),
+            (
+                "~=1",
+                Some("The ~= operator requires at least two parts in the release version"),
+            ),
             // Cannot use a prefix matching after a .devN version
-            ("==1.0.dev1.*", None),
-            ("!=1.0.dev1.*", None),
+            (
+                "==1.0.dev1.*",
+                Some("You can't have both a trailing `.*` and a dev version"),
+            ),
+            (
+                "!=1.0.dev1.*",
+                Some("You can't have both a trailing `.*` and a dev version"),
+            ),
         ];
         for (specifier, error) in specifiers {
             if let Some(error) = error {
@@ -796,5 +782,37 @@ mod tests {
                 )
             }
         }
+    }
+
+    #[test]
+    fn test_from_version_star() {
+        assert!(!Version::from_str_star("1.2.3").unwrap().1);
+        assert!(Version::from_str_star("1.2.3.*").unwrap().1);
+        assert_eq!(
+            Version::from_str_star("1.2.*.4.*").unwrap_err().to_string(),
+            "Version `1.2.*.4.*` doesn't match PEP 440 rules"
+        );
+        assert_eq!(
+            Version::from_str_star("1.0-dev1.*")
+                .unwrap_err()
+                .to_string(),
+            "You can't have both a trailing `.*` and a dev version"
+        );
+        assert_eq!(
+            Version::from_str_star("1.0a1.*").unwrap_err().to_string(),
+            "You can't have both a trailing `.*` and a prerelease version"
+        );
+        assert_eq!(
+            Version::from_str_star("1.0.post1.*")
+                .unwrap_err()
+                .to_string(),
+            "You can't have both a trailing `.*` and a post version"
+        );
+        assert_eq!(
+            Version::from_str_star("1.0+lolwat.*")
+                .unwrap_err()
+                .to_string(),
+            "You can't have both a trailing `.*` and a local version"
+        );
     }
 }

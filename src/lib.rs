@@ -12,7 +12,7 @@
 //! assert!(version_specifiers.iter().all(|specifier| specifier.contains(&version)));
 //! ```
 //!
-//! One thing that's a bit awkward about the API currently is that there's two kinds of
+//! One thing that's a bit awkward about the API is that there's two kinds of
 //! [Version]: One that doesn't allow stars (i.e. a package version), and one that does
 //! (i.e. a version in a specifier), but they both use the same struct.
 //!
