@@ -4,6 +4,8 @@ use lazy_static::lazy_static;
 #[cfg(feature = "pyo3")]
 use pyo3::{exceptions::PyValueError, pyclass, pymethods, PyResult};
 use regex::Regex;
+#[cfg(feature = "serde")]
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::Ordering;
 use std::fmt::Display;
 use std::fmt::Formatter;
@@ -57,6 +59,29 @@ impl VersionSpecifier {
     /// Returns the normalized representation
     pub fn __str__(&self) -> String {
         self.to_string()
+    }
+}
+
+/// https://github.com/serde-rs/serde/issues/1316#issue-332908452
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for VersionSpecifier {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        FromStr::from_str(&s).map_err(de::Error::custom)
+    }
+}
+
+/// https://github.com/serde-rs/serde/issues/1316#issue-332908452
+#[cfg(feature = "serde")]
+impl Serialize for VersionSpecifier {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.collect_str(self)
     }
 }
 

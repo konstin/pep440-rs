@@ -3,6 +3,8 @@ use lazy_static::lazy_static;
 use pyo3::{exceptions::PyValueError, pyclass, pymethods, PyResult};
 use regex::Captures;
 use regex::Regex;
+#[cfg(feature = "serde")]
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::iter;
@@ -274,6 +276,29 @@ pub struct Version {
     /// > identifier by a plus. Local version labels have no specific semantics assigned, but some
     /// > syntactic restrictions are imposed.
     pub local: Option<Vec<LocalSegment>>,
+}
+
+/// https://github.com/serde-rs/serde/issues/1316#issue-332908452
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for Version {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        FromStr::from_str(&s).map_err(de::Error::custom)
+    }
+}
+
+/// https://github.com/serde-rs/serde/issues/1316#issue-332908452
+#[cfg(feature = "serde")]
+impl Serialize for Version {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.collect_str(self)
+    }
 }
 
 impl Version {

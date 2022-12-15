@@ -15,6 +15,7 @@ lazy_static = "1.4.0"
 #pyo3 = { version = "0.17.3", optional = true, features = ["extension-module", "abi3-py37", "multiple-pymethods"] }
 pyo3 = { git = "https://github.com/PyO3/pyo3", branch = "cfg-feature-pyo3", optional = true, features = ["extension-module", "abi3-py37", "multiple-pymethods"] }
 regex = { version = "1.7.0", default-features = false, features = ["std", "perf", "unicode-case", "unicode-perl"] }
+serde = { version = "1.0.150", features = ["derive"], optional = true }
 tracing = "0.1.37"
 unicode-width = "0.1.10"
 
