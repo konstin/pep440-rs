@@ -14,7 +14,8 @@ use tracing::warn;
 use unicode_width::UnicodeWidthStr;
 
 lazy_static! {
-    /// Matches a python version specifier, such as `>=1.19.a1` or `4.1.*`. Extends the PEP 440 regex
+    /// Matches a python version specifier, such as `>=1.19.a1` or `4.1.*`. Extends the PEP 440
+    /// version regex to version specifiers
     static ref VERSION_SPECIFIER_RE: Regex = Regex::new(&format!(
         r#"(?xi)^(?:\s*)(?P<operator>(~=|==|!=|<=|>=|<|>|===))(?:\s*){}(?:\s*)$"#,
         VERSION_RE_INNER
