@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
 #[cfg(feature = "pyo3")]
-use pyo3::{exceptions::PyValueError, pyclass, pymethods, PyResult};
+use pyo3::{basic::CompareOp, exceptions::PyValueError, pyclass, pymethods, PyResult};
 use regex::Captures;
 use regex::Regex;
 #[cfg(feature = "serde")]
@@ -334,6 +334,17 @@ impl Version {
     #[cfg(feature = "pyo3")]
     pub fn __str__(&self) -> String {
         self.to_string()
+    }
+
+    /// Returns the normalized representation
+    #[cfg(feature = "pyo3")]
+    pub fn __repr__(&self) -> String {
+        self.to_string()
+    }
+
+    #[cfg(feature = "pyo3")]
+    fn __richcmp__(&self, other: &Self, op: CompareOp) -> bool {
+        op.matches(self.cmp(&other))
     }
 
     /// Whether this is an alpha/beta/rc or dev version

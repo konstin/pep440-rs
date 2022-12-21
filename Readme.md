@@ -26,6 +26,8 @@ assert Version("1.1.dev2").any_prerelease()
 assert not Version("1.1").any_prerelease()
 assert VersionSpecifier(">=1.0").contains(Version("1.1a1"))
 assert not VersionSpecifier(">=1.1").contains(Version("1.1a1"))
+# Note that python comparisons are the version ordering, not the version specifiers operators
+assert Version("1.1") >= Version("1.1a1")
 assert Version("2.0") in VersionSpecifier("==2")
 ```
 

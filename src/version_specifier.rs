@@ -61,6 +61,11 @@ impl VersionSpecifier {
     pub fn __str__(&self) -> String {
         self.to_string()
     }
+
+    /// Returns the normalized representation
+    pub fn __repr__(&self) -> String {
+        self.to_string()
+    }
 }
 
 /// https://github.com/serde-rs/serde/issues/1316#issue-332908452
