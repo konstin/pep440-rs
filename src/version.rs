@@ -344,7 +344,7 @@ impl Version {
 
     #[cfg(feature = "pyo3")]
     fn __richcmp__(&self, other: &Self, op: CompareOp) -> bool {
-        op.matches(self.cmp(&other))
+        op.matches(self.cmp(other))
     }
 
     /// Whether this is an alpha/beta/rc or dev version
