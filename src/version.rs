@@ -6,6 +6,8 @@ use regex::Regex;
 #[cfg(feature = "serde")]
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::Ordering;
+#[cfg(feature = "pyo3")]
+use std::collections::hash_map::DefaultHasher;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::iter;
@@ -343,6 +345,14 @@ impl Version {
     #[cfg(feature = "pyo3")]
     pub fn __repr__(&self) -> String {
         format!(r#""{}""#, self)
+    }
+
+    /// Returns the normalized representation
+    #[cfg(feature = "pyo3")]
+    pub fn __hash__(&self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        self.hash(&mut hasher);
+        hasher.finish()
     }
 
     #[cfg(feature = "pyo3")]
