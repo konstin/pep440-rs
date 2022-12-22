@@ -34,7 +34,7 @@ lazy_static! {
 /// assert!(version_specifier.contains(&version));
 /// ```
 #[cfg_attr(feature = "pyo3", pyclass)]
-#[derive(Eq, PartialEq, Debug, Clone)]
+#[derive(Eq, PartialEq, Debug, Clone, Hash)]
 pub struct VersionSpecifier {
     /// ~=|==|!=|<=|>=|<|>|===, plus whether the version ended with a star
     pub(crate) operator: Operator,
@@ -64,7 +64,7 @@ impl VersionSpecifier {
 
     /// Returns the normalized representation
     pub fn __repr__(&self) -> String {
-        self.to_string()
+        format!(r#""{}""#, self)
     }
 }
 
@@ -303,6 +303,9 @@ impl FromStr for VersionSpecifier {
 
 impl Display for VersionSpecifier {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        if self.operator == Operator::EqualStar {
+            return write!(f, "{} {}.*", Operator::Equal, self.version);
+        }
         write!(f, "{} {}", self.operator, self.version)
     }
 }
