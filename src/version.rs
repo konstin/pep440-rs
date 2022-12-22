@@ -7,6 +7,7 @@ use regex::Regex;
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
+use std::hash::{Hash, Hasher};
 use std::iter;
 use std::str::FromStr;
 use tracing::warn;
@@ -114,9 +115,11 @@ impl FromStr for Operator {
 }
 
 impl Display for Operator {
+    /// Note the EqualStar is also `==`
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let operator = match self {
             Operator::Equal => "==",
+            // Beware, this doesn't print the stsarr
             Operator::EqualStar => "==",
             #[allow(deprecated)]
             Operator::ExactEqual => "===",
@@ -339,7 +342,7 @@ impl Version {
     /// Returns the normalized representation
     #[cfg(feature = "pyo3")]
     pub fn __repr__(&self) -> String {
-        self.to_string()
+        format!(r#""{}""#, self)
     }
 
     #[cfg(feature = "pyo3")]
@@ -507,6 +510,21 @@ impl PartialEq<Self> for Version {
 }
 
 impl Eq for Version {}
+
+impl Hash for Version {
+    /// Custom implementation to ignoring trailing zero because PartialEq zero pads
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.epoch.hash(state);
+        // Skip trailing zeros
+        for i in self.release.iter().rev().skip_while(|x| x == 0) {
+            i.hash(state);
+        }
+        self.pre.hash(state);
+        self.dev.hash(state);
+        self.post.hash(state);
+        self.local.hash(state);
+    }
+}
 
 impl PartialOrd<Self> for Version {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
