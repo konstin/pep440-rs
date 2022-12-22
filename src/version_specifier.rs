@@ -1060,4 +1060,12 @@ mod test {
             }
         }
     }
+
+    #[test]
+    fn test_display_start() {
+        assert_eq!(
+            VersionSpecifier::from_str("== 1.1.*").unwrap().to_string(),
+            "== 1.1.*"
+        );
+    }
 }

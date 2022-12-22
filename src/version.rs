@@ -516,7 +516,7 @@ impl Hash for Version {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.epoch.hash(state);
         // Skip trailing zeros
-        for i in self.release.iter().rev().skip_while(|x| x == 0) {
+        for i in self.release.iter().rev().skip_while(|x| **x == 0) {
             i.hash(state);
         }
         self.pre.hash(state);
