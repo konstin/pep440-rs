@@ -163,7 +163,7 @@ dependencies = [
 [[package]]
 name = "pyo3"
 version = "0.17.3"
-source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#cc354538e0d18c267734b6412c5307620ebffa11"
+source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#b1229ab822df9b413cbdfb4adaa1776b129d8b49"
 dependencies = [
  "cfg-if",
  "indoc",
@@ -180,7 +180,7 @@ dependencies = [
 [[package]]
 name = "pyo3-build-config"
 version = "0.17.3"
-source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#cc354538e0d18c267734b6412c5307620ebffa11"
+source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#b1229ab822df9b413cbdfb4adaa1776b129d8b49"
 dependencies = [
  "once_cell",
  "target-lexicon",
@@ -189,7 +189,7 @@ dependencies = [
 [[package]]
 name = "pyo3-ffi"
 version = "0.17.3"
-source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#cc354538e0d18c267734b6412c5307620ebffa11"
+source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#b1229ab822df9b413cbdfb4adaa1776b129d8b49"
 dependencies = [
  "libc",
  "pyo3-build-config",
@@ -198,7 +198,7 @@ dependencies = [
 [[package]]
 name = "pyo3-macros"
 version = "0.17.3"
-source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#cc354538e0d18c267734b6412c5307620ebffa11"
+source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#b1229ab822df9b413cbdfb4adaa1776b129d8b49"
 dependencies = [
  "proc-macro2",
  "pyo3-macros-backend",
@@ -209,7 +209,7 @@ dependencies = [
 [[package]]
 name = "pyo3-macros-backend"
 version = "0.17.3"
-source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#cc354538e0d18c267734b6412c5307620ebffa11"
+source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#b1229ab822df9b413cbdfb4adaa1776b129d8b49"
 dependencies = [
  "proc-macro2",
  "quote",
