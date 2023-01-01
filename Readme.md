@@ -1,7 +1,7 @@
 # PEP440 in rust
 
 A library for python version numbers and specifiers, implementing
-[PEP 440](https://peps.python.org/pep-0440)
+[PEP 440](https://peps.python.org/pep-0440). See [Reimplementing PEP 440](https://cohost.org/konstin/post/514863-reimplementing-pep-4) for some background.
 
 Not yet on crates.io due to <https://github.com/PyO3/pyo3/pull/2786>.
 
