@@ -96,9 +96,9 @@ checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
 name = "memoffset"
-version = "0.7.1"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5de893c32cde5f383baa4c04c5d6dbdd735cfd4a794b0debdb2bb1b421da5ff4"
+checksum = "d61c719bcfbcf5d62b3a09efa6088de8c54bc0bfcd3ea7ae39fcc186108b8de1"
 dependencies = [
  "autocfg",
 ]
@@ -162,8 +162,8 @@ dependencies = [
 
 [[package]]
 name = "pyo3"
-version = "0.17.3"
-source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#b1229ab822df9b413cbdfb4adaa1776b129d8b49"
+version = "0.18.0"
+source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#25fe971a8e52879facce7a85527b14765c54a4bb"
 dependencies = [
  "cfg-if",
  "indoc",
@@ -179,8 +179,8 @@ dependencies = [
 
 [[package]]
 name = "pyo3-build-config"
-version = "0.17.3"
-source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#b1229ab822df9b413cbdfb4adaa1776b129d8b49"
+version = "0.18.0"
+source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#25fe971a8e52879facce7a85527b14765c54a4bb"
 dependencies = [
  "once_cell",
  "target-lexicon",
@@ -188,8 +188,8 @@ dependencies = [
 
 [[package]]
 name = "pyo3-ffi"
-version = "0.17.3"
-source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#b1229ab822df9b413cbdfb4adaa1776b129d8b49"
+version = "0.18.0"
+source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#25fe971a8e52879facce7a85527b14765c54a4bb"
 dependencies = [
  "libc",
  "pyo3-build-config",
@@ -197,8 +197,8 @@ dependencies = [
 
 [[package]]
 name = "pyo3-macros"
-version = "0.17.3"
-source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#b1229ab822df9b413cbdfb4adaa1776b129d8b49"
+version = "0.18.0"
+source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#25fe971a8e52879facce7a85527b14765c54a4bb"
 dependencies = [
  "proc-macro2",
  "pyo3-macros-backend",
@@ -208,8 +208,8 @@ dependencies = [
 
 [[package]]
 name = "pyo3-macros-backend"
-version = "0.17.3"
-source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#b1229ab822df9b413cbdfb4adaa1776b129d8b49"
+version = "0.18.0"
+source = "git+https://github.com/PyO3/pyo3?branch=cfg-feature-pyo3#25fe971a8e52879facce7a85527b14765c54a4bb"
 dependencies = [
  "proc-macro2",
  "quote",
