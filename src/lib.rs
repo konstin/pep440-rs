@@ -44,6 +44,7 @@
 
 #[cfg(feature = "pyo3")]
 use pyo3::{pymodule, types::PyModule, PyResult, Python};
+use std::error::Error;
 use std::fmt::{Display, Formatter};
 pub use version::{LocalSegment, Operator, PreRelease, Version};
 pub use version_specifier::{parse_version_specifiers, VersionSpecifier, VersionSpecifiers};
@@ -72,6 +73,8 @@ impl Display for Pep440Error {
         Ok(())
     }
 }
+
+impl Error for Pep440Error {}
 
 #[cfg(feature = "pyo3")]
 #[pymodule]
