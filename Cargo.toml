@@ -1,6 +1,6 @@
 [package]
 name = "pep440_rs"
-version = "0.1.1"
+version = "0.2.0"
 description = "A library for python version numbers and specifiers, implementing PEP 440"
 edition = "2021"
 # Same license as pypa/packaging where the tests are from
@@ -20,7 +20,7 @@ tracing = "0.1.37"
 unicode-width = "0.1.10"
 
 [dev-dependencies]
-indoc = "1.0.7"
+indoc = "2.0.1"
 
 [package.metadata.maturin]
 name = "pep440_rs._pep440_rs"

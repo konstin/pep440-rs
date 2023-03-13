@@ -3,12 +3,12 @@
 //!
 //! ```rust
 //! use std::str::FromStr;
-//! use pep440_rs::{parse_version_specifiers, Version, VersionSpecifier};
+//! use pep440_rs::{VersionSpecifiers, Version, VersionSpecifier};
 //!
 //! let version = Version::from_str("1.19").unwrap();
 //! let version_specifier = VersionSpecifier::from_str("== 1.*").unwrap();
 //! assert!(version_specifier.contains(&version));
-//! let version_specifiers = parse_version_specifiers(">=1.16, <2.0").unwrap();
+//! let version_specifiers = VersionSpecifiers::from_str(">=1.16, <2.0").unwrap();
 //! assert!(version_specifiers.iter().all(|specifier| specifier.contains(&version)));
 //! ```
 //!
@@ -46,7 +46,7 @@
 use pyo3::{pymodule, types::PyModule, PyResult, Python};
 use std::fmt::{Display, Formatter};
 pub use version::{LocalSegment, Operator, PreRelease, Version};
-pub use version_specifier::{parse_version_specifiers, VersionSpecifier};
+pub use version_specifier::{parse_version_specifiers, VersionSpecifier, VersionSpecifiers};
 
 mod version;
 mod version_specifier;

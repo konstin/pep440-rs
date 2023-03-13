@@ -9,6 +9,7 @@ use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::Ordering;
 use std::fmt::Display;
 use std::fmt::Formatter;
+use std::ops::Deref;
 use std::str::FromStr;
 use tracing::warn;
 use unicode_width::UnicodeWidthStr;
@@ -20,6 +21,68 @@ lazy_static! {
         r#"(?xi)^(?:\s*)(?P<operator>(~=|==|!=|<=|>=|<|>|===))(?:\s*){}(?:\s*)$"#,
         VERSION_RE_INNER
     )).unwrap();
+}
+
+/// A thin wrapper around `Vec<VersionSpecifier>` with a serde implementation
+///
+/// Python requirements can contain multiple version specifier so we need to store them in a list,
+/// such as `>1.2,<2.0` being `[">1.2", "<2.0"]`.
+///
+/// You can use the serde implementation to e.g. parse `requires-python` from pyproject.toml
+///
+/// ```rust
+/// use std::str::FromStr;
+/// use pep440_rs::{VersionSpecifiers, Version};
+///
+/// let version = Version::from_str("1.19").unwrap();
+/// let version_specifiers = VersionSpecifiers::from_str(">=1.16, <2.0").unwrap();
+/// assert!(version_specifiers.iter().all(|specifier| specifier.contains(&version)));
+/// ```
+#[derive(Eq, PartialEq, Debug, Clone, Hash)]
+pub struct VersionSpecifiers(pub Vec<VersionSpecifier>);
+
+impl Deref for VersionSpecifiers {
+    type Target = [VersionSpecifier];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl FromStr for VersionSpecifiers {
+    type Err = Pep440Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        parse_version_specifiers(s).map(Self)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for VersionSpecifiers {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Self::from_str(&s).map_err(de::Error::custom)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl Serialize for VersionSpecifiers {
+    #[allow(unstable_name_collisions)]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.collect_str(
+            &self
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<String>>()
+                .join(","),
+        )
+    }
 }
 
 /// A version range such such as `>1.2.3`, `<=4!5.6.7-a8.post9.dev0` or `== 4.1.*`. Parse with
@@ -310,7 +373,9 @@ impl Display for VersionSpecifier {
     }
 }
 
-/// Parses a list of specifiers such as `>= 1.0, != 1.3.*, < 2.0`
+/// Parses a list of specifiers such as `>= 1.0, != 1.3.*, < 2.0`.
+///
+/// I recommend using [VersionSpecifiers::from_str] instead.
 ///
 /// ```rust
 /// use std::str::FromStr;
@@ -346,8 +411,7 @@ pub fn parse_version_specifiers(spec: &str) -> Result<Vec<VersionSpecifier>, Pep
 
 #[cfg(test)]
 mod test {
-    use crate::version_specifier::parse_version_specifiers;
-    use crate::{Operator, Version, VersionSpecifier};
+    use crate::{Operator, Version, VersionSpecifier, VersionSpecifiers};
     use indoc::indoc;
     use std::cmp::Ordering;
     use std::str::FromStr;
@@ -838,9 +902,9 @@ mod test {
 
     #[test]
     fn test_parse_version_specifiers() {
-        let result = parse_version_specifiers("~= 0.9, >= 1.0, != 1.3.4.*, < 2.0").unwrap();
+        let result = VersionSpecifiers::from_str("~= 0.9, >= 1.0, != 1.3.4.*, < 2.0").unwrap();
         assert_eq!(
-            result,
+            result.0,
             [
                 VersionSpecifier {
                     operator: Operator::TildeEqual,
@@ -892,7 +956,7 @@ mod test {
 
     #[test]
     fn test_parse_error() {
-        let result = parse_version_specifiers("~= 0.9, %‍= 1.0, != 1.3.4.*");
+        let result = VersionSpecifiers::from_str("~= 0.9, %‍= 1.0, != 1.3.4.*");
         assert_eq!(
             result.unwrap_err().to_string(),
             indoc! {r#"
@@ -905,7 +969,7 @@ mod test {
 
     #[test]
     fn test_non_star_after_star() {
-        let result = parse_version_specifiers("== 0.9.*.1");
+        let result = VersionSpecifiers::from_str("== 0.9.*.1");
         assert_eq!(
             result.unwrap_err().message,
             "Version specifier `== 0.9.*.1` doesn't match PEP 440 rules"
@@ -914,7 +978,7 @@ mod test {
 
     #[test]
     fn test_star_wrong_operator() {
-        let result = parse_version_specifiers(">= 0.9.1.*");
+        let result = VersionSpecifiers::from_str(">= 0.9.1.*");
         assert_eq!(
             result.unwrap_err().message,
             "Operator >= must not be used in version ending with a star"
@@ -923,7 +987,7 @@ mod test {
 
     #[test]
     fn test_regex_mismatch() {
-        let result = parse_version_specifiers("blergh");
+        let result = VersionSpecifiers::from_str("blergh");
         assert_eq!(
             result.unwrap_err().message,
             "Version specifier `blergh` doesn't match PEP 440 rules"
