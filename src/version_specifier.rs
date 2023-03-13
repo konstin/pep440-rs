@@ -39,7 +39,7 @@ lazy_static! {
 /// assert!(version_specifiers.iter().all(|specifier| specifier.contains(&version)));
 /// ```
 #[derive(Eq, PartialEq, Debug, Clone, Hash)]
-pub struct VersionSpecifiers(pub Vec<VersionSpecifier>);
+pub struct VersionSpecifiers(Vec<VersionSpecifier>);
 
 impl Deref for VersionSpecifiers {
     type Target = [VersionSpecifier];
