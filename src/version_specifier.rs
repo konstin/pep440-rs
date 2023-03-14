@@ -49,6 +49,12 @@ impl Deref for VersionSpecifiers {
     }
 }
 
+impl FromIterator<VersionSpecifier> for VersionSpecifiers {
+    fn from_iter<T: IntoIterator<Item = VersionSpecifier>>(iter: T) -> Self {
+        Self(iter.into_iter().collect())
+    }
+}
+
 impl FromStr for VersionSpecifiers {
     type Err = Pep440Error;
 
