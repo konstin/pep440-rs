@@ -76,9 +76,11 @@ impl Display for Pep440Error {
 
 impl Error for Pep440Error {}
 
+/// Python bindings shipped as `pep440_rs`
 #[cfg(feature = "pyo3")]
 #[pymodule]
-fn _pep440_rs(_py: Python, module: &PyModule) -> PyResult<()> {
+#[pyo3(name = "_pep440_rs")]
+pub fn python_module(_py: Python, module: &PyModule) -> PyResult<()> {
     module.add_class::<Version>()?;
     module.add_class::<VersionSpecifier>()?;
     Ok(())
