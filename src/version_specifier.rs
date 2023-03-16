@@ -2,7 +2,12 @@ use crate::version::VERSION_RE_INNER;
 use crate::{version, Operator, Pep440Error, Version};
 use lazy_static::lazy_static;
 #[cfg(feature = "pyo3")]
-use pyo3::{exceptions::PyValueError, pyclass, pymethods, PyResult};
+use pyo3::{
+    exceptions::{PyNotImplementedError, PyValueError},
+    pyclass,
+    pyclass::CompareOp,
+    pymethods, PyResult,
+};
 use regex::Regex;
 #[cfg(feature = "serde")]
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
@@ -134,6 +139,16 @@ impl VersionSpecifier {
     /// Returns the normalized representation
     pub fn __repr__(&self) -> String {
         format!(r#""{}""#, self)
+    }
+
+    fn __richcmp__(&self, other: &Self, op: CompareOp) -> PyResult<bool> {
+        if matches!(op, CompareOp::Eq) {
+            Ok(self == other)
+        } else {
+            Err(PyNotImplementedError::new_err(
+                "Can only compare VersionSpecifier by equality",
+            ))
+        }
     }
 }
 
