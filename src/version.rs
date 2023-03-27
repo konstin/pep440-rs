@@ -307,6 +307,18 @@ impl Serialize for Version {
 }
 
 impl Version {
+    /// Constructor for a version that is just a release such as `3.8`
+    pub fn from_release(release: Vec<usize>) -> Self {
+        Self {
+            epoch: 0,
+            release,
+            pre: None,
+            post: None,
+            dev: None,
+            local: None,
+        }
+    }
+
     /// For PEP 440 specifier matching: "Except where specifically noted below, local version
     /// identifiers MUST NOT be permitted in version specifiers, and local version labels MUST be
     /// ignored entirely when checking if candidate versions match a given version specifier."
