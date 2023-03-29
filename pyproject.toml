@@ -10,7 +10,5 @@ build-backend = "maturin"
 features = ["pyo3"]
 python-source = "python"
 
-[tool.ruff]
-extend-exclude = [
-    "python/pep440_rs/__init__.py"
-]
+[tool.ruff.per-file-ignores]
+"python/pep440_rs/__init__.py" = ["F403", "F405"]

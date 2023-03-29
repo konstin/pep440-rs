@@ -13,8 +13,9 @@ def test_pep440():
     assert Version("1.1") >= Version("1.1a1")
     assert Version("2.0") in VersionSpecifier("==2")
 
+
 def test_normalization():
     assert str(Version("1.19-alpha.1")) == "1.19a1"
     assert str(VersionSpecifier(" >=1.19-alpha.1 ")) == ">= 1.19a1"
-    assert repr(Version("1.19-alpha.1")) == "\"1.19a1\""
-    assert repr(VersionSpecifier(" >=1.19-alpha.1 ")) == "\">= 1.19a1\""
+    assert repr(Version("1.19-alpha.1")) == '"1.19a1"'
+    assert repr(VersionSpecifier(" >=1.19-alpha.1 ")) == '">= 1.19a1"'

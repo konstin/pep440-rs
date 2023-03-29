@@ -1,3 +1,5 @@
+#[cfg(feature = "pyo3")]
+use crate::version::PyVersion;
 use crate::version::VERSION_RE_INNER;
 use crate::{version, Operator, Pep440Error, Version};
 use lazy_static::lazy_static;
@@ -36,12 +38,14 @@ lazy_static! {
 /// You can use the serde implementation to e.g. parse `requires-python` from pyproject.toml
 ///
 /// ```rust
-/// use std::str::FromStr;
-/// use pep440_rs::{VersionSpecifiers, Version};
+/// # use std::str::FromStr;
+/// # use pep440_rs::{VersionSpecifiers, Version, Operator};
 ///
 /// let version = Version::from_str("1.19").unwrap();
 /// let version_specifiers = VersionSpecifiers::from_str(">=1.16, <2.0").unwrap();
-/// assert!(version_specifiers.iter().all(|specifier| specifier.contains(&version)));
+/// assert!(version_specifiers.contains(&version));
+/// // VersionSpecifiers derefs into a list of specifiers
+/// assert_eq!(version_specifiers.iter().position(|specifier| *specifier.operator() == Operator::LessThan), Some(1));
 /// ```
 #[derive(Eq, PartialEq, Debug, Clone, Hash)]
 pub struct VersionSpecifiers(Vec<VersionSpecifier>);
@@ -51,6 +55,13 @@ impl Deref for VersionSpecifiers {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl VersionSpecifiers {
+    /// Whether all specifiers match the given version
+    pub fn contains(&self, version: &Version) -> bool {
+        self.iter().all(|specifier| specifier.contains(version))
     }
 }
 
@@ -127,8 +138,8 @@ impl VersionSpecifier {
     }
 
     /// Whether the version fulfills the specifier
-    pub fn __contains__(&self, version: &Version) -> bool {
-        self.contains(version)
+    pub fn __contains__(&self, version: &PyVersion) -> bool {
+        self.contains(&version.0)
     }
 
     /// Returns the normalized representation
@@ -239,7 +250,16 @@ impl VersionSpecifier {
     }
 }
 
-#[cfg_attr(feature = "pyo3", pymethods)]
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl VersionSpecifier {
+    /// See [VersionSpecifier::contains]
+    #[pyo3(name = "contains")]
+    pub fn py_contains(&self, version: &PyVersion) -> bool {
+        self.contains(&version.0)
+    }
+}
+
 impl VersionSpecifier {
     /// Whether the given version satisfies the version range
     ///
@@ -323,9 +343,7 @@ impl VersionSpecifier {
             Operator::LessThanEqual => Self::less_than(&this, &other) || other <= this,
         }
     }
-}
 
-impl VersionSpecifier {
     fn less_than(this: &Version, other: &Version) -> bool {
         if other.epoch < this.epoch {
             return true;

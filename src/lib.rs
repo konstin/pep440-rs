@@ -43,6 +43,8 @@
 #![deny(missing_docs)]
 
 #[cfg(feature = "pyo3")]
+use crate::version::PyVersion;
+#[cfg(feature = "pyo3")]
 use pyo3::{pymodule, types::PyModule, PyResult, Python};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -81,7 +83,7 @@ impl Error for Pep440Error {}
 #[pymodule]
 #[pyo3(name = "_pep440_rs")]
 pub fn python_module(_py: Python, module: &PyModule) -> PyResult<()> {
-    module.add_class::<Version>()?;
+    module.add_class::<PyVersion>()?;
     module.add_class::<VersionSpecifier>()?;
     Ok(())
 }

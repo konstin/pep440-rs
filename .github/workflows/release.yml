@@ -15,7 +15,7 @@ jobs:
       - name: Push to crates.io
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish --dry-run
+        run: cargo publish
 
   macos:
     runs-on: macos-latest

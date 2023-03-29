@@ -1,6 +1,9 @@
 use lazy_static::lazy_static;
 #[cfg(feature = "pyo3")]
-use pyo3::{basic::CompareOp, exceptions::PyValueError, pyclass, pymethods, PyResult};
+use pyo3::{
+    basic::CompareOp, exceptions::PyValueError, pyclass, pymethods, IntoPy, PyObject, PyResult,
+    Python,
+};
 use regex::Captures;
 use regex::Regex;
 #[cfg(feature = "serde")]
@@ -109,7 +112,7 @@ impl FromStr for Operator {
                 return Err(format!(
                     "No such comparison operator '{}', must be one of ~= == != <= >= < > ===",
                     other
-                ))
+                ));
             }
         };
         Ok(operator)
@@ -244,34 +247,28 @@ impl FromStr for LocalSegment {
 ///
 /// let version = Version::from_str("1.19").unwrap();
 /// ```
-#[cfg_attr(feature = "pyo3", pyclass)]
 #[derive(Debug, Clone)]
 pub struct Version {
     /// The [versioning epoch](https://peps.python.org/pep-0440/#version-epochs). Normally just 0,
     /// but you can increment it if you switched the versioning scheme.
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub epoch: usize,
     /// The normal number part of the version
     /// (["final release"](https://peps.python.org/pep-0440/#final-releases)),
     /// such a `1.2.3` in `4!1.2.3-a8.post9.dev1`
     ///
     /// Note that we drop the * placeholder by moving it to `Operator`
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub release: Vec<usize>,
     /// The [prerelease](https://peps.python.org/pep-0440/#pre-releases), i.e. alpha, beta or rc
     /// plus a number
     ///
     /// Note that whether this is Some influences the version
     /// range matching since normally we exclude all prerelease versions
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub pre: Option<(PreRelease, usize)>,
     /// The [Post release version](https://peps.python.org/pep-0440/#post-releases),
     /// higher post version are preferred over lower post or none-post versions
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub post: Option<usize>,
     /// The [developmental release](https://peps.python.org/pep-0440/#developmental-releases),
     /// if any
-    #[cfg_attr(feature = "pyo3", pyo3(get, set))]
     pub dev: Option<usize>,
     /// A [local version identifier](https://peps.python.org/pep-0440/#local-version-identifiers)
     /// such as `+deadbeef` in `1.2.3+deadbeef`
@@ -281,6 +278,91 @@ pub struct Version {
     /// > identifier by a plus. Local version labels have no specific semantics assigned, but some
     /// > syntactic restrictions are imposed.
     pub local: Option<Vec<LocalSegment>>,
+}
+
+#[cfg(feature = "pyo3")]
+impl IntoPy<PyObject> for Version {
+    fn into_py(self, py: Python<'_>) -> PyObject {
+        PyVersion(self).into_py(py)
+    }
+}
+
+/// Workaround for https://github.com/PyO3/pyo3/pull/2786
+#[cfg(feature = "pyo3")]
+#[pyclass(name = "Version")]
+pub struct PyVersion(pub(crate) Version);
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl PyVersion {
+    #[getter]
+    pub fn epoch(&self) -> usize {
+        self.0.epoch
+    }
+    #[getter]
+    pub fn release(&self) -> Vec<usize> {
+        self.0.release.clone()
+    }
+    #[getter]
+    pub fn pre(&self) -> Option<(PreRelease, usize)> {
+        self.0.pre.clone()
+    }
+    #[getter]
+    pub fn post(&self) -> Option<usize> {
+        self.0.post
+    }
+    #[getter]
+    pub fn dev(&self) -> Option<usize> {
+        self.0.dev
+    }
+
+    /// Parses a PEP 440 version string
+    #[cfg(feature = "pyo3")]
+    #[new]
+    pub fn parse(version: String) -> PyResult<Self> {
+        Ok(Self(
+            Version::from_str(&version).map_err(PyValueError::new_err)?,
+        ))
+    }
+
+    // Maps the error type
+    /// Parse a PEP 440 version optionally ending with `.*`
+    #[cfg(feature = "pyo3")]
+    #[staticmethod]
+    pub fn parse_star(version_specifier: String) -> PyResult<(Self, bool)> {
+        Version::from_str_star(&version_specifier)
+            .map_err(PyValueError::new_err)
+            .map(|(version, star)| (Self(version), star))
+    }
+
+    /// Returns the normalized representation
+    #[cfg(feature = "pyo3")]
+    pub fn __str__(&self) -> String {
+        self.0.to_string()
+    }
+
+    /// Returns the normalized representation
+    #[cfg(feature = "pyo3")]
+    pub fn __repr__(&self) -> String {
+        format!(r#""{}""#, self.0)
+    }
+
+    /// Returns the normalized representation
+    #[cfg(feature = "pyo3")]
+    pub fn __hash__(&self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        self.0.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    #[cfg(feature = "pyo3")]
+    fn __richcmp__(&self, other: &Self, op: CompareOp) -> bool {
+        op.matches(self.0.cmp(&other.0))
+    }
+
+    fn any_prerelease(&self) -> bool {
+        self.0.any_prerelease()
+    }
 }
 
 /// https://github.com/serde-rs/serde/issues/1316#issue-332908452
@@ -330,48 +412,7 @@ impl Version {
     }
 }
 
-#[cfg_attr(feature = "pyo3", pymethods)]
 impl Version {
-    /// Parses a PEP 440 version string
-    #[cfg(feature = "pyo3")]
-    #[new]
-    pub fn parse(version: String) -> PyResult<Self> {
-        Self::from_str(&version).map_err(PyValueError::new_err)
-    }
-
-    // Maps the error type
-    /// Parse a PEP 440 version optionally ending with `.*`
-    #[cfg(feature = "pyo3")]
-    #[staticmethod]
-    pub fn parse_star(version_specifier: String) -> PyResult<(Self, bool)> {
-        Self::from_str_star(&version_specifier).map_err(PyValueError::new_err)
-    }
-
-    /// Returns the normalized representation
-    #[cfg(feature = "pyo3")]
-    pub fn __str__(&self) -> String {
-        self.to_string()
-    }
-
-    /// Returns the normalized representation
-    #[cfg(feature = "pyo3")]
-    pub fn __repr__(&self) -> String {
-        format!(r#""{}""#, self)
-    }
-
-    /// Returns the normalized representation
-    #[cfg(feature = "pyo3")]
-    pub fn __hash__(&self) -> u64 {
-        let mut hasher = DefaultHasher::new();
-        self.hash(&mut hasher);
-        hasher.finish()
-    }
-
-    #[cfg(feature = "pyo3")]
-    fn __richcmp__(&self, other: &Self, op: CompareOp) -> bool {
-        op.matches(self.cmp(other))
-    }
-
     /// Whether this is an alpha/beta/rc or dev version
     pub fn any_prerelease(&self) -> bool {
         self.is_pre() || self.is_dev()
@@ -727,8 +768,9 @@ impl Version {
 
 #[cfg(test)]
 mod test {
-    use crate::{Version, VersionSpecifier};
     use std::str::FromStr;
+
+    use crate::{Version, VersionSpecifier};
 
     /// <https://github.com/pypa/packaging/blob/237ff3aa348486cf835a980592af3a59fccd6101/tests/test_version.py#L24-L81>
     #[test]
