@@ -7,7 +7,7 @@ on:
 
 
 jobs:
-  crates-io-dry-run:
+  crates-io:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
