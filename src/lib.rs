@@ -43,11 +43,11 @@
 #![deny(missing_docs)]
 
 #[cfg(feature = "pyo3")]
-use crate::version::PyVersion;
-#[cfg(feature = "pyo3")]
 use pyo3::{pymodule, types::PyModule, PyResult, Python};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+#[cfg(feature = "pyo3")]
+pub use version::PyVersion;
 pub use version::{LocalSegment, Operator, PreRelease, Version};
 pub use version_specifier::{parse_version_specifiers, VersionSpecifier, VersionSpecifiers};
 

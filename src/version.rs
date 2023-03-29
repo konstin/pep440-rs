@@ -289,28 +289,45 @@ impl IntoPy<PyObject> for Version {
 
 /// Workaround for https://github.com/PyO3/pyo3/pull/2786
 #[cfg(feature = "pyo3")]
+#[derive(Clone, Debug)]
 #[pyclass(name = "Version")]
-pub struct PyVersion(pub(crate) Version);
+pub struct PyVersion(pub Version);
 
 #[cfg(feature = "pyo3")]
 #[pymethods]
 impl PyVersion {
+    /// The [versioning epoch](https://peps.python.org/pep-0440/#version-epochs). Normally just 0,
+    /// but you can increment it if you switched the versioning scheme.
     #[getter]
     pub fn epoch(&self) -> usize {
         self.0.epoch
     }
+    /// The normal number part of the version
+    /// (["final release"](https://peps.python.org/pep-0440/#final-releases)),
+    /// such a `1.2.3` in `4!1.2.3-a8.post9.dev1`
+    ///
+    /// Note that we drop the * placeholder by moving it to `Operator`
     #[getter]
     pub fn release(&self) -> Vec<usize> {
         self.0.release.clone()
     }
+    /// The [prerelease](https://peps.python.org/pep-0440/#pre-releases), i.e. alpha, beta or rc
+    /// plus a number
+    ///
+    /// Note that whether this is Some influences the version
+    /// range matching since normally we exclude all prerelease versions
     #[getter]
     pub fn pre(&self) -> Option<(PreRelease, usize)> {
         self.0.pre.clone()
     }
+    /// The [Post release version](https://peps.python.org/pep-0440/#post-releases),
+    /// higher post version are preferred over lower post or none-post versions
     #[getter]
     pub fn post(&self) -> Option<usize> {
         self.0.post
     }
+    /// The [developmental release](https://peps.python.org/pep-0440/#developmental-releases),
+    /// if any
     #[getter]
     pub fn dev(&self) -> Option<usize> {
         self.0.dev

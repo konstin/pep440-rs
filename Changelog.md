@@ -1,3 +1,7 @@
+## 0.3.1
+
+ * Expose `Version` from `PyVersion`
+
 ## 0.3.0
 
  * Introduced a `PyVersion` wrapper specifically for the Python bindings to work around https://github.com/PyO3/pyo3/pull/2786

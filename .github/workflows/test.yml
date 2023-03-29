@@ -17,12 +17,8 @@ jobs:
         with:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
-      - name: Install ruff
-        run: |
-          pip install --upgrade pip
-          pip install ruff
       - name: Ruff
-        run: ruff .
+        run: pipx run ruff .
       - name: Rustfmt
         run: cargo fmt --all -- --check
       - name: Clippy (pure rust)
