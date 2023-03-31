@@ -124,7 +124,7 @@ impl Display for Operator {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let operator = match self {
             Operator::Equal => "==",
-            // Beware, this doesn't print the stsarr
+            // Beware, this doesn't print the star
             Operator::EqualStar => "==",
             #[allow(deprecated)]
             Operator::ExactEqual => "===",
@@ -138,6 +138,18 @@ impl Display for Operator {
         };
 
         write!(f, "{}", operator)
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl Operator {
+    fn __str__(&self) -> String {
+        self.to_string()
+    }
+
+    fn __repr__(&self) -> String {
+        self.to_string()
     }
 }
 

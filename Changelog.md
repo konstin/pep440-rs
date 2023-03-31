@@ -1,3 +1,7 @@
+## 0.3.2
+
+ * Expose `VersionSpecifier().operator` and `VersionSpecifier().version` to Python
+
 ## 0.3.1
 
  * Expose `Version` from `PyVersion`

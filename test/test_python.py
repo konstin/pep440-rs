@@ -1,7 +1,7 @@
 """
 This is implementation has some very rudimentary python bindings
 """
-from pep440_rs import Version, VersionSpecifier
+from pep440_rs import Version, VersionSpecifier, Operator
 
 
 def test_pep440():
@@ -12,6 +12,15 @@ def test_pep440():
     assert not VersionSpecifier(">=1.1").contains(Version("1.1a1"))
     assert Version("1.1") >= Version("1.1a1")
     assert Version("2.0") in VersionSpecifier("==2")
+
+
+def test_version_specifier():
+    assert VersionSpecifier(">=1.1").version == Version("1.1")
+    assert VersionSpecifier(">=1.1").operator == Operator.GreaterThanEqual
+    assert str(VersionSpecifier(">=1.1").operator) == ">="
+    # Note: This removes the star
+    assert VersionSpecifier("==1.1.*").version == Version("1.1")
+    assert str(VersionSpecifier("==1.1.*").operator) == "=="
 
 
 def test_normalization():

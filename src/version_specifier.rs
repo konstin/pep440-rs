@@ -118,7 +118,7 @@ impl Serialize for VersionSpecifiers {
 /// let version_specifier = VersionSpecifier::from_str("== 1.*").unwrap();
 /// assert!(version_specifier.contains(&version));
 /// ```
-#[cfg_attr(feature = "pyo3", pyclass)]
+#[cfg_attr(feature = "pyo3", pyclass(get_all))]
 #[derive(Eq, PartialEq, Debug, Clone, Hash)]
 pub struct VersionSpecifier {
     /// ~=|==|!=|<=|>=|<|>|===, plus whether the version ended with a star
