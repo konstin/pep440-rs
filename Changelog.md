@@ -1,3 +1,7 @@
+## 0.3.3
+
+ * Implement `Display` for `VersionSpecifiers`
+
 ## 0.3.2
 
  * Expose `VersionSpecifier().operator` and `VersionSpecifier().version` to Python

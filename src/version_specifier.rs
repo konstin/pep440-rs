@@ -14,8 +14,8 @@ use regex::Regex;
 #[cfg(feature = "serde")]
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::Ordering;
-use std::fmt::Display;
 use std::fmt::Formatter;
+use std::fmt::{Debug, Display};
 use std::ops::Deref;
 use std::str::FromStr;
 use tracing::warn;
@@ -76,6 +76,21 @@ impl FromStr for VersionSpecifiers {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         parse_version_specifiers(s).map(Self)
+    }
+}
+
+impl Display for VersionSpecifiers {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        for (idx, version_specifier) in self.0.iter().enumerate() {
+            // Separate version specifiers by comma, but we need one comma less than there are
+            // specifiers
+            if idx != 0 {
+                write!(f, ", {}", version_specifier)?;
+            } else {
+                write!(f, "{}", version_specifier)?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -1169,6 +1184,20 @@ mod test {
         assert_eq!(
             VersionSpecifier::from_str("== 1.1.*").unwrap().to_string(),
             "== 1.1.*"
+        );
+    }
+
+    #[test]
+    fn test_version_specifiers_str() {
+        assert_eq!(
+            VersionSpecifiers::from_str(">=3.7").unwrap().to_string(),
+            ">= 3.7"
+        );
+        assert_eq!(
+            VersionSpecifiers::from_str(">=3.7, <4.0, != 3.9.0")
+                .unwrap()
+                .to_string(),
+            ">= 3.7, < 4.0, != 3.9.0"
         );
     }
 }
