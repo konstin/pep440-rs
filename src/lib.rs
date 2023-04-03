@@ -86,5 +86,6 @@ pub fn python_module(_py: Python, module: &PyModule) -> PyResult<()> {
     module.add_class::<PyVersion>()?;
     module.add_class::<Operator>()?;
     module.add_class::<VersionSpecifier>()?;
+    module.add_class::<VersionSpecifiers>()?;
     Ok(())
 }

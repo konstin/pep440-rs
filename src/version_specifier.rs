@@ -5,10 +5,10 @@ use crate::{version, Operator, Pep440Error, Version};
 use lazy_static::lazy_static;
 #[cfg(feature = "pyo3")]
 use pyo3::{
-    exceptions::{PyNotImplementedError, PyValueError},
+    exceptions::{PyIndexError, PyNotImplementedError, PyValueError},
     pyclass,
     pyclass::CompareOp,
-    pymethods, PyResult,
+    pymethods, Py, PyRef, PyRefMut, PyResult,
 };
 use regex::Regex;
 #[cfg(feature = "serde")]
@@ -48,6 +48,7 @@ lazy_static! {
 /// assert_eq!(version_specifiers.iter().position(|specifier| *specifier.operator() == Operator::LessThan), Some(1));
 /// ```
 #[derive(Eq, PartialEq, Debug, Clone, Hash)]
+#[cfg_attr(feature = "pyo3", pyclass(sequence))]
 pub struct VersionSpecifiers(Vec<VersionSpecifier>);
 
 impl Deref for VersionSpecifiers {
@@ -91,6 +92,68 @@ impl Display for VersionSpecifiers {
             }
         }
         Ok(())
+    }
+}
+
+/// https://pyo3.rs/v0.18.2/class/protocols.html#iterable-objects
+#[cfg(feature = "pyo3")]
+#[pyclass]
+struct VersionSpecifiersIter {
+    inner: std::vec::IntoIter<VersionSpecifier>,
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl VersionSpecifiersIter {
+    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<VersionSpecifier> {
+        slf.inner.next()
+    }
+}
+
+#[cfg(feature = "pyo3")]
+#[pymethods]
+impl VersionSpecifiers {
+    /// PEP 440 parsing
+    #[new]
+    pub fn __new__(version_specifiers: String) -> PyResult<Self> {
+        Self::from_str(&version_specifiers).map_err(|err| PyValueError::new_err(err.to_string()))
+    }
+
+    /// PEP 440 serialization
+    pub fn __str__(&self) -> String {
+        self.to_string()
+    }
+
+    /// PEP 440 serialization
+    pub fn __repr__(&self) -> String {
+        self.to_string()
+    }
+
+    /// Get the nth VersionSpecifier
+    pub fn __getitem__(&self, idx: usize) -> PyResult<VersionSpecifier> {
+        self.0.get(idx).cloned().ok_or_else(|| {
+            PyIndexError::new_err(format!(
+                "list index {} our of range for len {}",
+                idx,
+                self.0.len()
+            ))
+        })
+    }
+
+    fn __iter__(slf: PyRef<'_, Self>) -> PyResult<Py<VersionSpecifiersIter>> {
+        let iter = VersionSpecifiersIter {
+            inner: slf.0.clone().into_iter(),
+        };
+        Py::new(slf.py(), iter)
+    }
+
+    /// Get the number of VersionSpecifier
+    pub fn __len__(&self) -> usize {
+        self.0.len()
     }
 }
 
