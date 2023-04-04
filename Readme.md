@@ -1,5 +1,8 @@
 # PEP440 in rust
 
+[![Crates.io](https://img.shields.io/crates/v/pep440_rs.svg?logo=rust&style=flat-square)](https://crates.io/crates/maturin)
+[![PyPI](https://img.shields.io/pypi/v/pep440_rs.svg?logo=python&style=flat-square)](https://pypi.org/project/maturin)
+
 A library for python version numbers and specifiers, implementing
 [PEP 440](https://peps.python.org/pep-0440). See [Reimplementing PEP 440](https://cohost.org/konstin/post/514863-reimplementing-pep-4) for some background.
 
