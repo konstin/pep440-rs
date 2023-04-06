@@ -1,6 +1,7 @@
 ## 0.3.5
 
 * Make string serialization look more like poetry's
+* Implement `__hash__` for `VersionSpecifier`
 
 ## 0.3.4
 

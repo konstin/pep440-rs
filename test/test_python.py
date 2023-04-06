@@ -21,6 +21,11 @@ def test_version_specifier():
     # Note: This removes the star
     assert VersionSpecifier("==1.1.*").version == Version("1.1")
     assert str(VersionSpecifier("==1.1.*").operator) == "=="
+    assert {
+        VersionSpecifier("==1.1.*"),
+        VersionSpecifier("==1.1"),
+        VersionSpecifier("==1.1"),
+    } == {VersionSpecifier("==1.1.*"), VersionSpecifier("==1.1")}
 
 
 def test_version_specifiers():

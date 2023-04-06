@@ -14,8 +14,12 @@ use regex::Regex;
 #[cfg(feature = "serde")]
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::cmp::Ordering;
+#[cfg(feature = "pyo3")]
+use std::collections::hash_map::DefaultHasher;
 use std::fmt::Formatter;
 use std::fmt::{Debug, Display};
+#[cfg(feature = "pyo3")]
+use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::str::FromStr;
 use tracing::warn;
@@ -244,6 +248,13 @@ impl VersionSpecifier {
                 "Can only compare VersionSpecifier by equality",
             ))
         }
+    }
+
+    /// Returns the normalized representation
+    pub fn __hash__(&self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        self.hash(&mut hasher);
+        hasher.finish()
     }
 }
 
