@@ -215,6 +215,12 @@ impl VersionSpecifier {
         Self::from_str(&version_specifier).map_err(PyValueError::new_err)
     }
 
+    /// See [VersionSpecifier::contains]
+    #[pyo3(name = "contains")]
+    pub fn py_contains(&self, version: &PyVersion) -> bool {
+        self.contains(&version.0)
+    }
+
     /// Whether the version fulfills the specifier
     pub fn __contains__(&self, version: &PyVersion) -> bool {
         self.contains(&version.0)
@@ -325,16 +331,6 @@ impl VersionSpecifier {
     /// Get the version, e.g. `<=` in `<= 2.0.0`
     pub fn version(&self) -> &Version {
         &self.version
-    }
-}
-
-#[cfg(feature = "pyo3")]
-#[pymethods]
-impl VersionSpecifier {
-    /// See [VersionSpecifier::contains]
-    #[pyo3(name = "contains")]
-    pub fn py_contains(&self, version: &PyVersion) -> bool {
-        self.contains(&version.0)
     }
 }
 
@@ -483,10 +479,10 @@ impl FromStr for VersionSpecifier {
 
 impl Display for VersionSpecifier {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        if self.operator == Operator::EqualStar {
-            return write!(f, "{} {}.*", Operator::Equal, self.version);
+        if self.operator == Operator::EqualStar || self.operator == Operator::NotEqualStar {
+            return write!(f, "{}{}.*", self.operator, self.version);
         }
-        write!(f, "{} {}", self.operator, self.version)
+        write!(f, "{}{}", self.operator, self.version)
     }
 }
 
@@ -1245,22 +1241,30 @@ mod test {
     #[test]
     fn test_display_start() {
         assert_eq!(
-            VersionSpecifier::from_str("== 1.1.*").unwrap().to_string(),
-            "== 1.1.*"
+            VersionSpecifier::from_str("==     1.1.*")
+                .unwrap()
+                .to_string(),
+            "==1.1.*"
+        );
+        assert_eq!(
+            VersionSpecifier::from_str("!=     1.1.*")
+                .unwrap()
+                .to_string(),
+            "!=1.1.*"
         );
     }
 
     #[test]
     fn test_version_specifiers_str() {
         assert_eq!(
-            VersionSpecifiers::from_str(">=3.7").unwrap().to_string(),
-            ">= 3.7"
+            VersionSpecifiers::from_str(">= 3.7").unwrap().to_string(),
+            ">=3.7"
         );
         assert_eq!(
-            VersionSpecifiers::from_str(">=3.7, <4.0, != 3.9.0")
+            VersionSpecifiers::from_str(">=3.7, <      4.0, != 3.9.0")
                 .unwrap()
                 .to_string(),
-            ">= 3.7, < 4.0, != 3.9.0"
+            ">=3.7, <4.0, !=3.9.0"
         );
     }
 }

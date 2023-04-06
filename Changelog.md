@@ -1,3 +1,7 @@
+## 0.3.5
+
+* Make string serialization look more like poetry's
+
 ## 0.3.4
 
 * Python bindings for `VersionSpecifiers`

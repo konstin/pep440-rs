@@ -24,7 +24,7 @@ def test_version_specifier():
 
 
 def test_version_specifiers():
-    assert str(VersionSpecifiers(">=1.1, <2.0")) == ">= 1.1, < 2.0"
+    assert str(VersionSpecifiers(">=1.1, <2.0")) == ">=1.1, <2.0"
     assert list(VersionSpecifiers(">=1.1, <2.0")) == [
         VersionSpecifier(">=1.1"),
         VersionSpecifier("<2.0"),
@@ -33,6 +33,6 @@ def test_version_specifiers():
 
 def test_normalization():
     assert str(Version("1.19-alpha.1")) == "1.19a1"
-    assert str(VersionSpecifier(" >=1.19-alpha.1 ")) == ">= 1.19a1"
+    assert str(VersionSpecifier(" >=1.19-alpha.1 ")) == ">=1.19a1"
     assert repr(Version("1.19-alpha.1")) == '"1.19a1"'
-    assert repr(VersionSpecifier(" >=1.19-alpha.1 ")) == '">= 1.19a1"'
+    assert repr(VersionSpecifier(" >=1.19-alpha.1 ")) == '">=1.19a1"'
