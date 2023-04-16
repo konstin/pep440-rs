@@ -6,7 +6,7 @@ edition = "2021"
 # Same license as pypa/packaging where the tests are from
 license = "Apache-2.0 OR BSD-2-Clause"
 repository = "https://github.com/konstin/pep440-rs"
-
+include = ["/src", "Changelog.md", "License-Apache", "License-BSD", "Readme.md", "pyproject.toml"]
 
 [lib]
 name = "pep440_rs"
