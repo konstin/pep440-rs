@@ -1,3 +1,7 @@
+## 0.3.6
+
+* Fix Readme display
+
 ## 0.3.5
 
 * Make string serialization look more like poetry's

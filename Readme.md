@@ -1,7 +1,7 @@
 # PEP440 in rust
 
-[![Crates.io](https://img.shields.io/crates/v/pep440_rs.svg?logo=rust&style=flat-square)](https://crates.io/crates/maturin)
-[![PyPI](https://img.shields.io/pypi/v/pep440_rs.svg?logo=python&style=flat-square)](https://pypi.org/project/maturin)
+[![Crates.io](https://img.shields.io/crates/v/pep440_rs.svg?logo=rust&style=flat-square)](https://crates.io/crates/pep440_rs)
+[![PyPI](https://img.shields.io/pypi/v/pep440_rs.svg?logo=python&style=flat-square)](https://pypi.org/project/pep440_rs)
 
 A library for python version numbers and specifiers, implementing
 [PEP 440](https://peps.python.org/pep-0440). See [Reimplementing PEP 440](https://cohost.org/konstin/post/514863-reimplementing-pep-4) for some background.
@@ -13,7 +13,7 @@ use std::str::FromStr;
 use pep440_rs::{parse_version_specifiers, Version, VersionSpecifier};
 
 let version = Version::from_str("1.19").unwrap();
-let version_specifier = VersionSpecifier::from_str("== 1.*").unwrap();
+let version_specifier = VersionSpecifier::from_str("==1.*").unwrap();
 assert!(version_specifier.contains(&version));
 let version_specifiers = parse_version_specifiers(">=1.16, <2.0").unwrap();
 assert!(version_specifiers.iter().all(|specifier| specifier.contains(&version)));
