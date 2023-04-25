@@ -40,4 +40,6 @@ def test_normalization():
     assert str(Version("1.19-alpha.1")) == "1.19a1"
     assert str(VersionSpecifier(" >=1.19-alpha.1 ")) == ">=1.19a1"
     assert repr(Version("1.19-alpha.1")) == '<Version("1.19a1")>'
-    assert repr(VersionSpecifier(" >=1.19-alpha.1 ")) == '<VersionSpecifier(">=1.19a1")>'
+    assert (
+        repr(VersionSpecifier(" >=1.19-alpha.1 ")) == '<VersionSpecifier(">=1.19a1")>'
+    )
