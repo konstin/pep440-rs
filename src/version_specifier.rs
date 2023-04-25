@@ -237,7 +237,7 @@ impl VersionSpecifier {
 
     /// Returns the normalized representation
     pub fn __repr__(&self) -> String {
-        format!(r#""{}""#, self)
+        format!(r#"<VersionSpecifier("{}")>"#, self)
     }
 
     fn __richcmp__(&self, other: &Self, op: CompareOp) -> PyResult<bool> {

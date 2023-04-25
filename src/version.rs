@@ -373,7 +373,7 @@ impl PyVersion {
     /// Returns the normalized representation
     #[cfg(feature = "pyo3")]
     pub fn __repr__(&self) -> String {
-        format!(r#""{}""#, self.0)
+        format!(r#"<Version("{}")>"#, self.0)
     }
 
     /// Returns the normalized representation
