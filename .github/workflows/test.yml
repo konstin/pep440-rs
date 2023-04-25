@@ -49,5 +49,5 @@ jobs:
         with:
           command: build
       - name: Install pep440_rs
-        run: pip install pep440_rs --find-links target/wheels
+        run: pip install --no-index --find-links target/wheels pep440_rs
       - run: pytest
