@@ -23,6 +23,3 @@ unicode-width = "0.1.10"
 
 [dev-dependencies]
 indoc = "2.0.1"
-
-[package.metadata.maturin]
-name = "pep440_rs._pep440_rs"

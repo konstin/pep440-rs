@@ -1038,7 +1038,10 @@ mod test {
                         pre: None,
                         post: None,
                         dev: None,
-                        local: None
+                        local: None,
+                        major: 0,
+                        minor: 9,
+                        micro: 0,
                     }
                 },
                 VersionSpecifier {
@@ -1049,7 +1052,10 @@ mod test {
                         pre: None,
                         post: None,
                         dev: None,
-                        local: None
+                        local: None,
+                        major: 1,
+                        minor: 0,
+                        micro: 0,
                     }
                 },
                 VersionSpecifier {
@@ -1060,7 +1066,10 @@ mod test {
                         pre: None,
                         post: None,
                         dev: None,
-                        local: None
+                        local: None,
+                        major: 1,
+                        minor: 3,
+                        micro: 4,
                     }
                 },
                 VersionSpecifier {
@@ -1071,7 +1080,10 @@ mod test {
                         pre: None,
                         post: None,
                         dev: None,
-                        local: None
+                        local: None,
+                        major: 2,
+                        minor: 0,
+                        micro: 0,
                     }
                 }
             ]

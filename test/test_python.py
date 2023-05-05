@@ -12,6 +12,9 @@ def test_pep440():
     assert not VersionSpecifier(">=1.1").contains(Version("1.1a1"))
     assert Version("1.1") >= Version("1.1a1")
     assert Version("2.0") in VersionSpecifier("==2")
+    assert Version("2.1").major == 2
+    assert Version("2.1").minor == 1
+    assert Version("2.1").micro == 0
 
 
 def test_version_specifier():

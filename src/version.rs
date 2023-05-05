@@ -290,6 +290,12 @@ pub struct Version {
     /// > identifier by a plus. Local version labels have no specific semantics assigned, but some
     /// > syntactic restrictions are imposed.
     pub local: Option<Vec<LocalSegment>>,
+    /// The first item of release or 0 if unavailable.
+    pub major: usize,
+    /// The second item of release or 0 if unavailable.
+    pub minor: usize,
+    /// The third item of release or 0 if unavailable.
+    pub micro: usize,
 }
 
 #[cfg(feature = "pyo3")]
@@ -343,6 +349,21 @@ impl PyVersion {
     #[getter]
     pub fn dev(&self) -> Option<usize> {
         self.0.dev
+    }
+    /// The first item of release or 0 if unavailable.
+    #[getter]
+    pub fn major(&self) -> usize {
+        self.0.major
+    }
+    /// The second item of release or 0 if unavailable.
+    #[getter]
+    pub fn minor(&self) -> usize {
+        self.0.minor
+    }
+    /// The third item of release or 0 if unavailable.
+    #[getter]
+    pub fn micro(&self) -> usize {
+        self.0.micro
     }
 
     /// Parses a PEP 440 version string
@@ -427,6 +448,9 @@ impl Version {
             post: None,
             dev: None,
             local: None,
+            major: 0,
+            minor: 0,
+            micro: 0,
         }
     }
 
@@ -765,6 +789,9 @@ impl Version {
             .split('.')
             .map(|segment| segment.parse::<usize>().map_err(|err| err.to_string()))
             .collect::<Result<Vec<usize>, String>>()?;
+        let major = if !release.is_empty() { release[0] } else { 0 };
+        let minor = if release.len() >= 2 { release[1] } else { 0 };
+        let micro = if release.len() >= 3 { release[2] } else { 0 };
         let star = captures.name("trailing_dot_star").is_some();
         if star {
             if pre.is_some() {
@@ -790,6 +817,9 @@ impl Version {
             post,
             dev,
             local,
+            major,
+            minor,
+            micro,
         };
         Ok((version, star))
     }
