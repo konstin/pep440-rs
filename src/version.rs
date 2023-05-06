@@ -347,29 +347,17 @@ impl PyVersion {
     /// The first item of release or 0 if unavailable.
     #[getter]
     pub fn major(&self) -> usize {
-        if !self.release().is_empty() {
-            self.release()[0]
-        } else {
-            0
-        }
+        self.release().get(0).cloned().unwrap_or_default()
     }
     /// The second item of release or 0 if unavailable.
     #[getter]
     pub fn minor(&self) -> usize {
-        if self.release().len() > 1 {
-            self.release()[1]
-        } else {
-            0
-        }
+        self.release().get(1).cloned().unwrap_or_default()
     }
     /// The third item of release or 0 if unavailable.
     #[getter]
     pub fn micro(&self) -> usize {
-        if self.release().len() > 2 {
-            self.release()[2]
-        } else {
-            0
-        }
+        self.release().get(2).cloned().unwrap_or_default()
     }
 
     /// Parses a PEP 440 version string
