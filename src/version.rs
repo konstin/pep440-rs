@@ -344,6 +344,33 @@ impl PyVersion {
     pub fn dev(&self) -> Option<usize> {
         self.0.dev
     }
+    /// The first item of release or 0 if unavailable.
+    #[getter]
+    pub fn major(&self) -> usize {
+        if !self.release().is_empty() {
+            self.release()[0]
+        } else {
+            0
+        }
+    }
+    /// The second item of release or 0 if unavailable.
+    #[getter]
+    pub fn minor(&self) -> usize {
+        if self.release().len() > 1 {
+            self.release()[1]
+        } else {
+            0
+        }
+    }
+    /// The third item of release or 0 if unavailable.
+    #[getter]
+    pub fn micro(&self) -> usize {
+        if self.release().len() > 2 {
+            self.release()[2]
+        } else {
+            0
+        }
+    }
 
     /// Parses a PEP 440 version string
     #[cfg(feature = "pyo3")]
@@ -765,6 +792,7 @@ impl Version {
             .split('.')
             .map(|segment| segment.parse::<usize>().map_err(|err| err.to_string()))
             .collect::<Result<Vec<usize>, String>>()?;
+
         let star = captures.name("trailing_dot_star").is_some();
         if star {
             if pre.is_some() {
