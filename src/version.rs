@@ -346,6 +346,7 @@ impl PyVersion {
     }
     /// The first item of release or 0 if unavailable.
     #[getter]
+    #[allow(clippy::get_first)]
     pub fn major(&self) -> usize {
         self.release().get(0).cloned().unwrap_or_default()
     }
