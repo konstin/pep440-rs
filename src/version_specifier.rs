@@ -22,8 +22,10 @@ use std::fmt::{Debug, Display};
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 use std::str::FromStr;
-use tracing::warn;
 use unicode_width::UnicodeWidthStr;
+
+#[cfg(feature = "tracing")]
+use tracing::warn;
 
 lazy_static! {
     /// Matches a python version specifier, such as `>=1.19.a1` or `4.1.*`. Extends the PEP 440
@@ -384,7 +386,10 @@ impl VersionSpecifier {
             }
             #[allow(deprecated)]
             Operator::ExactEqual => {
-                warn!("Using arbitrary equality (`===`) is discouraged");
+                #[cfg(feature = "tracing")]
+                {
+                    warn!("Using arbitrary equality (`===`) is discouraged");
+                }
                 self.version.to_string() == version.to_string()
             }
             Operator::NotEqual => other != this,
