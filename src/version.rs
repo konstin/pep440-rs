@@ -15,6 +15,8 @@ use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::iter;
 use std::str::FromStr;
+
+#[cfg(feature = "tracing")]
 use tracing::warn;
 
 /// A regex copied from <https://peps.python.org/pep-0440/#appendix-b-parsing-version-strings-with-regular-expressions>,
@@ -97,7 +99,10 @@ impl FromStr for Operator {
         let operator = match s {
             "==" => Self::Equal,
             "===" => {
-                warn!("Using arbitrary equality (`===`) is discouraged");
+                #[cfg(feature = "tracing")]
+                {
+                    warn!("Using arbitrary equality (`===`) is discouraged");
+                }
                 #[allow(deprecated)]
                 Self::ExactEqual
             }

@@ -18,7 +18,7 @@ lazy_static = "1.4.0"
 pyo3 = { version = "0.18.3", optional = true, features = ["extension-module", "abi3-py37"] }
 regex = { version = "1.8.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-perl"] }
 serde = { version = "1.0.162", features = ["derive"], optional = true }
-tracing = "0.1.37"
+tracing = { version = "0.1.37", optional = true }
 unicode-width = "0.1.10"
 
 [dev-dependencies]
