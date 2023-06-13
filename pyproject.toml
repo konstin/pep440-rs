@@ -3,7 +3,7 @@ name = "pep440_rs"
 readme = "python/Readme.md"
 
 [build-system]
-requires = ["maturin>=0.15,<0.16"]
+requires = ["maturin>=1.0.0,<2.0.0"]
 build-backend = "maturin"
 
 [tool.maturin]

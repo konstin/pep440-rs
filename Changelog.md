@@ -1,3 +1,7 @@
+## 0.3.10
+
+* Update pyo3 to 0.19 and maturin to 1.0
+
 ## 0.3.7
 
 * Add `major()`, `minor()` and `micro()` to `Version` by ischaojie ([#9](https://github.com/konstin/pep440-rs/pull/9))
