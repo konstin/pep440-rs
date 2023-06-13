@@ -1,3 +1,7 @@
+## 0.3.11
+
+ * CI fix
+
 ## 0.3.10
 
 * Update pyo3 to 0.19 and maturin to 1.0

@@ -34,7 +34,7 @@ jobs:
       - name: Build wheels - universal2
         uses: PyO3/maturin-action@v1
         with:
-          args: --release --strip --universal2 --out dist
+          args: --release --strip --target universal2-apple-darwin --out dist
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
