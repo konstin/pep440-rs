@@ -21,7 +21,7 @@ use tracing::warn;
 
 /// A regex copied from <https://peps.python.org/pep-0440/#appendix-b-parsing-version-strings-with-regular-expressions>,
 /// updated to support stars for version ranges
-pub(crate) const VERSION_RE_INNER: &str = r#"
+pub(crate) const VERSION_RE_INNER: &str = r"
 (?:
     (?:v?)                                            # <https://peps.python.org/pep-0440/#preceding-v-character>
     (?:(?P<epoch>[0-9]+)!)?                           # epoch
@@ -51,7 +51,7 @@ pub(crate) const VERSION_RE_INNER: &str = r#"
 )
 (?:\+(?P<local>[a-z0-9]+(?:[-_\.][a-z0-9]+)*))?       # local version
 (?P<trailing_dot_star>\.\*)?                          # allow for version matching `.*`
-"#;
+";
 
 lazy_static! {
     /// Matches a python version, such as `1.19.a1`. Based on the PEP 440 regex
