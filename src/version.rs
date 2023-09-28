@@ -1,8 +1,8 @@
 use lazy_static::lazy_static;
 #[cfg(feature = "pyo3")]
 use pyo3::{
-    basic::CompareOp, exceptions::PyValueError, pyclass, pymethods, IntoPy, PyObject, PyResult,
-    Python,
+    basic::CompareOp, exceptions::PyValueError, pyclass, pymethods, FromPyObject, IntoPy, PyAny,
+    PyObject, PyResult, Python,
 };
 use regex::Captures;
 use regex::Regex;
@@ -301,6 +301,13 @@ pub struct Version {
 impl IntoPy<PyObject> for Version {
     fn into_py(self, py: Python<'_>) -> PyObject {
         PyVersion(self).into_py(py)
+    }
+}
+
+#[cfg(feature = "pyo3")]
+impl<'source> FromPyObject<'source> for Version {
+    fn extract(ob: &'source PyAny) -> PyResult<Self> {
+        Ok(ob.extract::<PyVersion>()?.0)
     }
 }
 
@@ -819,6 +826,8 @@ impl Version {
 
 #[cfg(test)]
 mod test {
+    #[cfg(feature = "pyo3")]
+    use pyo3::pyfunction;
     use std::str::FromStr;
 
     use crate::{Version, VersionSpecifier};
@@ -1168,5 +1177,11 @@ mod test {
             Version::from_str_star("1.0+lolwat.*").unwrap_err(),
             "You can't have both a trailing `.*` and a local version"
         );
+    }
+
+    #[cfg(feature = "pyo3")]
+    #[pyfunction]
+    fn _convert_in_and_out(version: Version) -> Version {
+        version
     }
 }
