@@ -162,6 +162,7 @@ impl VersionSpecifiers {
         self.0.len()
     }
 
+    /// Whether the version matches all the specifiers
     pub fn __contains__(&self, version: &PyVersion) -> bool {
         self.contains(&version.0)
     }
