@@ -161,6 +161,10 @@ impl VersionSpecifiers {
     pub fn __len__(&self) -> usize {
         self.0.len()
     }
+
+    pub fn __contains__(&self, version: &PyVersion) -> bool {
+        self.contains(&version.0)
+    }
 }
 
 #[cfg(feature = "serde")]
