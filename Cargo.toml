@@ -1,6 +1,6 @@
 [package]
 name = "pep440_rs"
-version = "0.3.12"
+version = "0.4.0"
 description = "A library for python version numbers and specifiers, implementing PEP 440"
 edition = "2021"
 include = ["/src", "Changelog.md", "License-Apache", "License-BSD", "Readme.md", "pyproject.toml"]
@@ -14,12 +14,12 @@ name = "pep440_rs"
 crate-type = ["rlib", "cdylib"]
 
 [dependencies]
-lazy_static = "1.4.0"
-pyo3 = { version = "0.19", optional = true, features = ["extension-module", "abi3-py37"] }
-regex = { version = "1.8.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-perl"] }
-serde = { version = "1.0.162", features = ["derive"], optional = true }
-tracing = { version = "0.1.37", optional = true }
-unicode-width = "0.1.10"
+once_cell = { version = "1.19.0" }
+pyo3 = { version = "0.20.0", optional = true, features = ["extension-module", "abi3-py37"] }
+regex = { version = "1.10.2" }
+serde = { version = "1.0.193", features = ["derive"], optional = true }
+tracing = { version = "0.1.40", optional = true }
+unicode-width = { version = "0.1.11" }
 
 [dev-dependencies]
-indoc = "2.0.1"
+indoc = "2.0.4"
