@@ -32,7 +32,7 @@
 //! * ordering contradicts matching: We have e.g. `1.0+local > 1.0` when sorting,
 //!   but `==1.0` matches `1.0+local`. While the ordering of versions itself is a total order
 //!   the version matching needs to catch all sorts of special cases
-#![deny(missing_docs)]
+#![warn(missing_docs)]
 
 #[cfg(feature = "pyo3")]
 pub use version::PyVersion;
