@@ -11,14 +11,13 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy, rustfmt
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+      - name: Install clippy and rustfmt
+        run: rustup component add clippy rustfmt
       - uses: Swatinem/rust-cache@v2
       - name: Ruff
-        run: pipx run ruff .
+        run: pipx run ruff check
       - name: Rustfmt
         run: cargo fmt --all -- --check
       - name: Clippy (pure rust)
@@ -29,17 +28,15 @@ jobs:
   test-rust:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2
       - run: cargo test
 
   test-python:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
       - uses: Swatinem/rust-cache@v2
       - name: Install pytest
         run: |

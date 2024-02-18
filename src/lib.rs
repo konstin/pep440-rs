@@ -1,5 +1,5 @@
 //! A library for python version numbers and specifiers, implementing
-//! [PEP 440](https://peps.python.org/pep-0440)
+//! [PEP 440](https://peps.python.org/pep-0440).
 //!
 //! ```rust
 //! use std::str::FromStr;
@@ -9,16 +9,8 @@
 //! let version_specifier = VersionSpecifier::from_str("== 1.*").unwrap();
 //! assert!(version_specifier.contains(&version));
 //! let version_specifiers = VersionSpecifiers::from_str(">=1.16, <2.0").unwrap();
-//! assert!(version_specifiers.iter().all(|specifier| specifier.contains(&version)));
+//! assert!(version_specifiers.contains(&version));
 //! ```
-//!
-//! One thing that's a bit awkward about the API is that there's two kinds of
-//! [Version]: One that doesn't allow stars (i.e. a package version), and one that does
-//! (i.e. a version in a specifier), but they both use the same struct.
-//!
-//! The error handling and diagnostics is a bit overdone because this my parser-and-diagnostics
-//! learning project (which kinda failed because the byte based regex crate and char-based
-//! diagnostics don't mix well)
 //!
 //! PEP 440 has a lot of unintuitive features, including:
 //!
@@ -43,46 +35,25 @@
 #![deny(missing_docs)]
 
 #[cfg(feature = "pyo3")]
-use pyo3::{pymodule, types::PyModule, PyResult, Python};
-use std::error::Error;
-use std::fmt::{Display, Formatter};
-#[cfg(feature = "pyo3")]
 pub use version::PyVersion;
-pub use version::{LocalSegment, Operator, PreRelease, Version};
-pub use version_specifier::{parse_version_specifiers, VersionSpecifier, VersionSpecifiers};
+pub use {
+    version::{
+        LocalSegment, Operator, OperatorParseError, PreRelease, PreReleaseKind, Version,
+        VersionParseError, VersionPattern, VersionPatternParseError, MIN_VERSION,
+    },
+    version_specifier::{
+        VersionSpecifier, VersionSpecifiers, VersionSpecifiersParseError,
+    },
+};
 
 mod version;
 mod version_specifier;
 
-/// Error with span information (unicode width) inside the parsed line
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub struct Pep440Error {
-    /// The actual error message
-    pub message: String,
-    /// The string that failed to parse
-    pub line: String,
-    /// First character for underlining (unicode width)
-    pub start: usize,
-    /// Number of characters to underline (unicode width)
-    pub width: usize,
-}
-
-impl Display for Pep440Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Failed to parse version:")?;
-        writeln!(f, "{}", self.line)?;
-        writeln!(f, "{}{}", " ".repeat(self.start), "^".repeat(self.width))?;
-        Ok(())
-    }
-}
-
-impl Error for Pep440Error {}
-
 /// Python bindings shipped as `pep440_rs`
 #[cfg(feature = "pyo3")]
-#[pymodule]
+#[pyo3::pymodule]
 #[pyo3(name = "_pep440_rs")]
-pub fn python_module(_py: Python, module: &PyModule) -> PyResult<()> {
+pub fn python_module(_py: pyo3::Python, module: &pyo3::types::PyModule) -> pyo3::PyResult<()> {
     module.add_class::<PyVersion>()?;
     module.add_class::<Operator>()?;
     module.add_class::<VersionSpecifier>()?;

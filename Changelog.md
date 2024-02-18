@@ -1,3 +1,17 @@
+## 0.5
+
+The crate has been completely rewritten by [burntsushi](https://github.com/BurntSushi/).
+
+* Faster version parsing.
+* Faster version comparisons.
+* `Version` field accessors are now methods. 
+* `Version` is an [`Arc`](https://doc.rust-lang.org/std/sync/struct.Arc.html) of its internal representation, so cloning
+  is cheap.
+* The internal representation of a version is split into a full representation and an optimized small variant that can
+  handle 75% of the versions on pypi.
+* Parse errors are now opaque.
+* [rkyv](https://github.com/rkyv/rkyv) support.
+
 ## 0.4
 
 * segments are now `u64` instead of `usize`. This ensures consistency between platforms and `u64` are required

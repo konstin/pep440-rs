@@ -11,5 +11,5 @@ features = ["pyo3"]
 python-source = "python"
 module-name = "pep440_rs._pep440_rs"
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "python/pep440_rs/__init__.py" = ["F403", "F405"]
