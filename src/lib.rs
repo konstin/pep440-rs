@@ -47,10 +47,10 @@ pub use {
 mod version;
 mod version_specifier;
 
-/// Python bindings shipped as `pep440_rs`
 #[cfg(feature = "pyo3")]
 #[pyo3::pymodule]
 #[pyo3(name = "_pep440_rs")]
+/// Python bindings shipped as `pep440_rs`
 pub fn python_module(module: &pyo3::Bound<'_, pyo3::types::PyModule>) -> pyo3::PyResult<()> {
     module.add_class::<PyVersion>()?;
     module.add_class::<Operator>()?;

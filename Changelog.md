@@ -1,3 +1,7 @@
+## 0.6
+
+* Update pyo3 to 0.21 and a minimum of python 3.8
+
 ## 0.5
 
 The crate has been completely rewritten by [burntsushi](https://github.com/BurntSushi/).
