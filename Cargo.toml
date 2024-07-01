@@ -20,7 +20,7 @@ pyo3 = { version = "0.21.2", optional = true, features = ["extension-module", "a
 serde = { version = "1.0.200", features = ["derive"], optional = true }
 rkyv = { version = "0.7.44", features = ["strict", "validation"], optional = true }
 tracing = { version = "0.1.40", optional = true }
-unicode-width = { version = "0.1.12" }
+unicode-width = { version = "0.1.13" }
 unscanny = { version = "0.1.0" }
 
 [dev-dependencies]
