@@ -1,3 +1,7 @@
+## 0.6.2
+
+* CI updates
+
 ## 0.6.1
 
 * Update pyo3 to 0.22
