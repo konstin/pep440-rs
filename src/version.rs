@@ -720,8 +720,8 @@ impl FromStr for Version {
 /// * The epoch must be `0`.
 /// * The release portion must have 4 or fewer segments.
 /// * All release segments, except for the first, must be representable in a
-/// `u8`. The first segment must be representable in a `u16`. (This permits
-/// calendar versions, like `2023.03`, to be represented.)
+///   `u8`. The first segment must be representable in a `u16`. (This permits
+///   calendar versions, like `2023.03`, to be represented.)
 /// * There is *at most* one of the following components: pre, dev or post.
 /// * If there is a pre segment, then its numeric value is less than 64.
 /// * If there is a dev or post segment, then its value is less than u8::MAX.
@@ -742,21 +742,21 @@ impl FromStr for Version {
 ///
 /// * Bytes 6 and 7 correspond to the first release segment as a `u16`.
 /// * Bytes 5, 4 and 3 correspond to the second, third and fourth release
-/// segments, respectively.
+///   segments, respectively.
 /// * Byte 2 corresponds to the post-release segment. If there is no
-/// post-release segment, then byte 2 is set to 0x00. This makes "no
-/// post-release" sort before "has post-release." The numeric value
-/// (constrained to be <u8::MAX) has 1 added to it so that 0x00 is reserved to
-/// indicate absence.
+///   post-release segment, then byte 2 is set to 0x00. This makes "no
+///   post-release" sort before "has post-release." The numeric value
+///   (constrained to be <u8::MAX) has 1 added to it so that 0x00 is reserved to
+///   indicate absence.
 /// * Byte 1 corresponds to the pre-release segment. If there is no pre-release
-/// segment, then byte 1 is set to 0xFF. This makes "no pre-release" sort
-/// after "has pre-release." The most significant two bits of byte 1 encode
-/// the type of pre-release (alpha, beta, rc) while the low 6 bits encode the
-/// pre-release numeric value.
+///   segment, then byte 1 is set to 0xFF. This makes "no pre-release" sort
+///   after "has pre-release." The most significant two bits of byte 1 encode
+///   the type of pre-release (alpha, beta, rc) while the low 6 bits encode the
+///   pre-release numeric value.
 /// * Byte 0 corresponds to the dev-release segment. If there is no dev-release
-/// segment, then byte 0 is set to 0xFF. This makes "no dev-release" sort after
-/// "has dev-release." The dev-release value (constrained to be <u8::MAX) is
-/// stored in byte 0 as-is.
+///   segment, then byte 0 is set to 0xFF. This makes "no dev-release" sort after
+///   "has dev-release." The dev-release value (constrained to be <u8::MAX) is
+///   stored in byte 0 as-is.
 ///
 /// The order of the encoding above is significant. For example, the
 /// post-release segment is encoded at a more significant byte in the `u64`
