@@ -1,3 +1,7 @@
+## 0.6.1
+
+* Update pyo3 to 0.22
+
 ## 0.6
 
 * Update pyo3 to 0.21 and a minimum of python 3.8
