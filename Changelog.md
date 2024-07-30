@@ -1,3 +1,7 @@
+## 0.6.3
+
+* CI fixes
+
 ## 0.6.2
 
 * CI updates
