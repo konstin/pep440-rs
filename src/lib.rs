@@ -52,6 +52,7 @@ mod version_specifier;
 #[pyo3(name = "_pep440_rs")]
 /// Python bindings shipped as `pep440_rs`
 pub fn python_module(module: &pyo3::Bound<'_, pyo3::types::PyModule>) -> pyo3::PyResult<()> {
+    use pyo3::prelude::*;
     module.add_class::<PyVersion>()?;
     module.add_class::<Operator>()?;
     module.add_class::<VersionSpecifier>()?;
