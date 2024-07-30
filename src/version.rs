@@ -8,8 +8,8 @@ use std::{
 
 #[cfg(feature = "pyo3")]
 use pyo3::{
-    basic::CompareOp, exceptions::PyValueError, pyclass, pymethods, FromPyObject, IntoPy, PyAny,
-    PyObject, PyResult, Python,
+    basic::CompareOp, exceptions::PyValueError, pyclass, pymethods, Bound, FromPyObject, IntoPy,
+    PyAny, PyObject, PyResult, Python,
 };
 #[cfg(feature = "serde")]
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
@@ -25,7 +25,7 @@ use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
     feature = "rkyv",
     archive_attr(derive(Debug, Eq, PartialEq, PartialOrd, Ord))
 )]
-#[cfg_attr(feature = "pyo3", pyclass)]
+#[cfg_attr(feature = "pyo3", pyclass(eq, eq_int))]
 pub enum Operator {
     /// `== 1.2.3`
     Equal,
@@ -1134,7 +1134,7 @@ pub struct PreRelease {
 ///
 /// <https://peps.python.org/pep-0440/#pre-releases>
 #[derive(PartialEq, Eq, Debug, Hash, Clone, Copy, Ord, PartialOrd)]
-#[cfg_attr(feature = "pyo3", pyclass)]
+#[cfg_attr(feature = "pyo3", pyclass(eq, eq_int))]
 #[cfg_attr(
     feature = "rkyv",
     derive(rkyv::Archive, rkyv::Deserialize, rkyv::Serialize)
@@ -2164,7 +2164,8 @@ impl IntoPy<PyObject> for Version {
 
 #[cfg(feature = "pyo3")]
 impl<'source> FromPyObject<'source> for Version {
-    fn extract(ob: &'source PyAny) -> PyResult<Self> {
+    fn extract_bound(ob: &Bound<'source, PyAny>) -> PyResult<Self> {
+        use pyo3::prelude::*;
         Ok(ob.extract::<PyVersion>()?.0)
     }
 }
