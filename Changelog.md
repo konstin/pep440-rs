@@ -1,3 +1,7 @@
+## 0.6.6
+
+* Add `VersionSpecifiers::empty()`, which is present in the uv version of this crate but missing here.
+
 ## 0.6.2 - 0.6.5
 
 * CI fixes
