@@ -20,7 +20,7 @@ The crate has been completely rewritten by [burntsushi](https://github.com/Burnt
 
 * Faster version parsing.
 * Faster version comparisons.
-* `Version` field accessors are now methods. 
+* `Version` field accessors are now methods.
 * `Version` is an [`Arc`](https://doc.rust-lang.org/std/sync/struct.Arc.html) of its internal representation, so cloning
   is cheap.
 * The internal representation of a version is split into a full representation and an optimized small variant that can
@@ -30,8 +30,8 @@ The crate has been completely rewritten by [burntsushi](https://github.com/Burnt
 
 ## 0.4
 
-* segments are now `u64` instead of `usize`. This ensures consistency between platforms and `u64` are required
-  when timestamps are used as patch versions (e.g., `20230628214621`, the ISO 8601 "basic format")
+* segments are now `u64` instead of `usize`. This ensures consistency between platforms and `u64` are required when
+  timestamps are used as patch versions (e.g., `20230628214621`, the ISO 8601 "basic format")
 * Faster version comparison
 * Added `VersionSpecifier::equals_version` constructor for `==<version>`
 * Added `VersionSpecifier::any_prerelease`: Whether the version marker includes a prerelease
@@ -88,6 +88,6 @@ The crate has been completely rewritten by [burntsushi](https://github.com/Burnt
 
 ## 0.2.0
 
-* Added `VersionSpecifiers`, a thin wrapper around `Vec<VersionSpecifier>` with a serde
-  implementation. `VersionSpecifiers::from_str` is now preferred over `parse_version_specifiers`.
+* Added `VersionSpecifiers`, a thin wrapper around `Vec<VersionSpecifier>` with a serde implementation.
+  `VersionSpecifiers::from_str` is now preferred over `parse_version_specifiers`.
 * Reexport rust function for python module
