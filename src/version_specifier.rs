@@ -1,29 +1,17 @@
-#[cfg(feature = "pyo3")]
-use std::hash::{Hash, Hasher};
-use std::{cmp::Ordering, str::FromStr};
+use std::cmp::Ordering;
+use std::ops::Bound;
+use std::str::FromStr;
 
-#[cfg(feature = "pyo3")]
-use pyo3::{
-    exceptions::{PyIndexError, PyNotImplementedError, PyValueError},
-    pyclass,
-    pyclass::CompareOp,
-    pymethods, Py, PyRef, PyRefMut, PyResult,
-};
-#[cfg(feature = "serde")]
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 
-#[cfg(feature = "pyo3")]
-use crate::version::PyVersion;
 use crate::{
     version, Operator, OperatorParseError, Version, VersionPattern, VersionPatternParseError,
 };
 
-/// A thin wrapper around `Vec<VersionSpecifier>` with a serde implementation
+/// Sorted version specifiers, such as `>=2.1,<3`.
 ///
 /// Python requirements can contain multiple version specifier so we need to store them in a list,
 /// such as `>1.2,<2.0` being `[">1.2", "<2.0"]`.
-///
-/// You can use the serde implementation to e.g. parse `requires-python` from pyproject.toml
 ///
 /// ```rust
 /// # use std::str::FromStr;
@@ -35,14 +23,19 @@ use crate::{
 /// // VersionSpecifiers derefs into a list of specifiers
 /// assert_eq!(version_specifiers.iter().position(|specifier| *specifier.operator() == Operator::LessThan), Some(1));
 /// ```
-#[derive(Eq, PartialEq, Debug, Clone, Hash)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Archive, rkyv::Deserialize, rkyv::Serialize)
+#[derive(
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Debug,
+    Clone,
+    Hash,
+    rkyv::Archive,
+    rkyv::Deserialize,
+    rkyv::Serialize,
 )]
-#[cfg_attr(feature = "rkyv", archive(check_bytes))]
-#[cfg_attr(feature = "rkyv", archive_attr(derive(Debug)))]
-#[cfg_attr(feature = "pyo3", pyclass(sequence))]
+#[rkyv(derive(Debug))]
 pub struct VersionSpecifiers(Vec<VersionSpecifier>);
 
 impl std::ops::Deref for VersionSpecifiers {
@@ -59,15 +52,28 @@ impl VersionSpecifiers {
         Self(Vec::new())
     }
 
-    /// Whether all specifiers match the given version
+    /// Whether all specifiers match the given version.
     pub fn contains(&self, version: &Version) -> bool {
         self.iter().all(|specifier| specifier.contains(version))
+    }
+
+    /// Returns `true` if the specifiers are empty is empty.
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Sort the specifiers.
+    fn from_unsorted(mut specifiers: Vec<VersionSpecifier>) -> Self {
+        // TODO(konsti): This seems better than sorting on insert and not getting the size hint,
+        // but i haven't measured it.
+        specifiers.sort_by(|a, b| a.version().cmp(b.version()));
+        Self(specifiers)
     }
 }
 
 impl FromIterator<VersionSpecifier> for VersionSpecifiers {
-    fn from_iter<T: IntoIterator<Item = VersionSpecifier>>(iter: T) -> Self {
-        Self(iter.into_iter().collect())
+    fn from_iter<T: IntoIterator<Item=VersionSpecifier>>(iter: T) -> Self {
+        Self::from_unsorted(iter.into_iter().collect())
     }
 }
 
@@ -75,7 +81,7 @@ impl FromStr for VersionSpecifiers {
     type Err = VersionSpecifiersParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        parse_version_specifiers(s).map(Self)
+        parse_version_specifiers(s).map(Self::from_unsorted)
     }
 }
 
@@ -100,75 +106,12 @@ impl std::fmt::Display for VersionSpecifiers {
     }
 }
 
-/// https://pyo3.rs/v0.18.2/class/protocols.html#iterable-objects
-#[cfg(feature = "pyo3")]
-#[pyclass]
-struct VersionSpecifiersIter {
-    inner: std::vec::IntoIter<VersionSpecifier>,
-}
-
-#[cfg(feature = "pyo3")]
-#[pymethods]
-impl VersionSpecifiersIter {
-    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
-        slf
-    }
-
-    fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<VersionSpecifier> {
-        slf.inner.next()
+impl Default for VersionSpecifiers {
+    fn default() -> Self {
+        Self::empty()
     }
 }
 
-#[cfg(feature = "pyo3")]
-#[pymethods]
-impl VersionSpecifiers {
-    /// PEP 440 parsing
-    #[new]
-    pub fn __new__(version_specifiers: &str) -> PyResult<Self> {
-        Self::from_str(version_specifiers).map_err(|err| PyValueError::new_err(err.to_string()))
-    }
-
-    /// PEP 440 serialization
-    pub fn __str__(&self) -> String {
-        self.to_string()
-    }
-
-    /// PEP 440 serialization
-    pub fn __repr__(&self) -> String {
-        self.to_string()
-    }
-
-    /// Get the nth VersionSpecifier
-    pub fn __getitem__(&self, idx: usize) -> PyResult<VersionSpecifier> {
-        self.0.get(idx).cloned().ok_or_else(|| {
-            PyIndexError::new_err(format!(
-                "list index {} our of range for len {}",
-                idx,
-                self.0.len()
-            ))
-        })
-    }
-
-    #[allow(clippy::needless_pass_by_value)]
-    fn __iter__(slf: PyRef<'_, Self>) -> PyResult<Py<VersionSpecifiersIter>> {
-        let iter = VersionSpecifiersIter {
-            inner: slf.0.clone().into_iter(),
-        };
-        Py::new(slf.py(), iter)
-    }
-
-    /// Get the number of VersionSpecifier
-    pub fn __len__(&self) -> usize {
-        self.0.len()
-    }
-
-    /// Whether the version matches all the specifiers
-    pub fn __contains__(&self, version: &PyVersion) -> bool {
-        self.contains(&version.0)
-    }
-}
-
-#[cfg(feature = "serde")]
 impl<'de> Deserialize<'de> for VersionSpecifiers {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -179,7 +122,6 @@ impl<'de> Deserialize<'de> for VersionSpecifiers {
     }
 }
 
-#[cfg(feature = "serde")]
 impl Serialize for VersionSpecifiers {
     #[allow(unstable_name_collisions)]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -228,8 +170,8 @@ impl std::fmt::Display for VersionSpecifiersParseError {
             start,
             end,
         } = *self.inner;
-        writeln!(f, "Failed to parse version: {}:", err)?;
-        writeln!(f, "{}", line)?;
+        writeln!(f, "Failed to parse version: {err}:")?;
+        writeln!(f, "{line}")?;
         let indent = line[..start].width();
         let point = line[start..end].width();
         writeln!(f, "{}{}", " ".repeat(indent), "^".repeat(point))?;
@@ -257,14 +199,19 @@ impl std::error::Error for VersionSpecifiersParseError {}
 /// let version_specifier = VersionSpecifier::from_str("== 1.*").unwrap();
 /// assert!(version_specifier.contains(&version));
 /// ```
-#[derive(Eq, PartialEq, Debug, Clone, Hash)]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Archive, rkyv::Deserialize, rkyv::Serialize)
+#[derive(
+    Eq,
+    Ord,
+    PartialEq,
+    PartialOrd,
+    Debug,
+    Clone,
+    Hash,
+    rkyv::Archive,
+    rkyv::Deserialize,
+    rkyv::Serialize,
 )]
-#[cfg_attr(feature = "rkyv", archive(check_bytes))]
-#[cfg_attr(feature = "rkyv", archive_attr(derive(Debug)))]
-#[cfg_attr(feature = "pyo3", pyclass(get_all))]
+#[rkyv(derive(Debug))]
 pub struct VersionSpecifier {
     /// ~=|==|!=|<=|>=|<|>|===, plus whether the version ended with a star
     pub(crate) operator: Operator,
@@ -272,57 +219,7 @@ pub struct VersionSpecifier {
     pub(crate) version: Version,
 }
 
-#[cfg(feature = "pyo3")]
-#[pymethods]
-impl VersionSpecifier {
-    // Since we don't bring FromStr to python
-    /// Parse a PEP 440 version
-    #[new]
-    pub fn parse(version_specifier: &str) -> PyResult<Self> {
-        Self::from_str(version_specifier).map_err(|e| PyValueError::new_err(e.to_string()))
-    }
-
-    /// See [VersionSpecifier::contains]
-    #[pyo3(name = "contains")]
-    pub fn py_contains(&self, version: &PyVersion) -> bool {
-        self.contains(&version.0)
-    }
-
-    /// Whether the version fulfills the specifier
-    pub fn __contains__(&self, version: &PyVersion) -> bool {
-        self.contains(&version.0)
-    }
-
-    /// Returns the normalized representation
-    pub fn __str__(&self) -> String {
-        self.to_string()
-    }
-
-    /// Returns the normalized representation
-    pub fn __repr__(&self) -> String {
-        format!(r#"<VersionSpecifier("{self}")>"#)
-    }
-
-    fn __richcmp__(&self, other: &Self, op: CompareOp) -> PyResult<bool> {
-        if matches!(op, CompareOp::Eq) {
-            Ok(self == other)
-        } else {
-            Err(PyNotImplementedError::new_err(
-                "Can only compare VersionSpecifier by equality",
-            ))
-        }
-    }
-
-    /// Returns the normalized representation
-    pub fn __hash__(&self) -> u64 {
-        let mut hasher = std::collections::hash_map::DefaultHasher::new();
-        self.hash(&mut hasher);
-        hasher.finish()
-    }
-}
-
 /// <https://github.com/serde-rs/serde/issues/1316#issue-332908452>
-#[cfg(feature = "serde")]
 impl<'de> Deserialize<'de> for VersionSpecifier {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -334,7 +231,6 @@ impl<'de> Deserialize<'de> for VersionSpecifier {
 }
 
 /// <https://github.com/serde-rs/serde/issues/1316#issue-332908452>
-#[cfg(feature = "serde")]
 impl Serialize for VersionSpecifier {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -347,16 +243,12 @@ impl Serialize for VersionSpecifier {
 impl VersionSpecifier {
     /// Build from parts, validating that the operator is allowed with that version. The last
     /// parameter indicates a trailing `.*`, to differentiate between `1.1.*` and `1.1`
-    pub fn new(
+    pub fn from_pattern(
         operator: Operator,
         version_pattern: VersionPattern,
     ) -> Result<Self, VersionSpecifierBuildError> {
         let star = version_pattern.is_wildcard();
         let version = version_pattern.into_version();
-        // "Local version identifiers are NOT permitted in this version specifier."
-        if version.is_local() && !operator.is_local_compatible() {
-            return Err(BuildErrorKind::OperatorLocalCombo { operator, version }.into());
-        }
 
         // Check if there are star versions and if so, switch operator to star version
         let operator = if star {
@@ -369,6 +261,19 @@ impl VersionSpecifier {
         } else {
             operator
         };
+
+        Self::from_version(operator, version)
+    }
+
+    /// Create a new version specifier from an operator and a version.
+    pub fn from_version(
+        operator: Operator,
+        version: Version,
+    ) -> Result<Self, VersionSpecifierBuildError> {
+        // "Local version identifiers are NOT permitted in this version specifier."
+        if version.is_local() && !operator.is_local_compatible() {
+            return Err(BuildErrorKind::OperatorLocalCombo { operator, version }.into());
+        }
 
         if operator == Operator::TildeEqual && version.release().len() < 2 {
             return Err(BuildErrorKind::CompatibleRelease.into());
@@ -385,6 +290,61 @@ impl VersionSpecifier {
         }
     }
 
+    /// `==<version>.*`
+    pub fn equals_star_version(version: Version) -> Self {
+        Self {
+            operator: Operator::EqualStar,
+            version,
+        }
+    }
+
+    /// `!=<version>.*`
+    pub fn not_equals_star_version(version: Version) -> Self {
+        Self {
+            operator: Operator::NotEqualStar,
+            version,
+        }
+    }
+
+    /// `!=<version>`
+    pub fn not_equals_version(version: Version) -> Self {
+        Self {
+            operator: Operator::NotEqual,
+            version,
+        }
+    }
+
+    /// `>=<version>`
+    pub fn greater_than_equal_version(version: Version) -> Self {
+        Self {
+            operator: Operator::GreaterThanEqual,
+            version,
+        }
+    }
+    /// `><version>`
+    pub fn greater_than_version(version: Version) -> Self {
+        Self {
+            operator: Operator::GreaterThan,
+            version,
+        }
+    }
+
+    /// `<=<version>`
+    pub fn less_than_equal_version(version: Version) -> Self {
+        Self {
+            operator: Operator::LessThanEqual,
+            version,
+        }
+    }
+
+    /// `<<version>`
+    pub fn less_than_version(version: Version) -> Self {
+        Self {
+            operator: Operator::LessThan,
+            version,
+        }
+    }
+
     /// Get the operator, e.g. `>=` in `>= 2.0.0`
     pub fn operator(&self) -> &Operator {
         &self.operator
@@ -395,37 +355,88 @@ impl VersionSpecifier {
         &self.version
     }
 
+    /// Get the operator and version parts of this specifier.
+    pub fn into_parts(self) -> (Operator, Version) {
+        (self.operator, self.version)
+    }
+
     /// Whether the version marker includes a prerelease.
     pub fn any_prerelease(&self) -> bool {
         self.version.any_prerelease()
     }
 
-    /// Whether the given version satisfies the version range
+    /// Returns the version specifiers whose union represents the given range.
     ///
-    /// e.g. `>=1.19,<2.0` and `1.21` -> true
-    /// <https://peps.python.org/pep-0440/#version-specifiers>
+    /// This function is not applicable to ranges involving pre-release versions.
+    pub fn from_release_only_bounds(
+        bounds: (&Bound<Version>, &Bound<Version>),
+    ) -> impl Iterator<Item=VersionSpecifier> {
+        let (b1, b2) = match bounds {
+            (Bound::Included(v1), Bound::Included(v2)) if v1 == v2 => {
+                (Some(VersionSpecifier::equals_version(v1.clone())), None)
+            }
+            // `v >= 3.7 && v < 3.8` is equivalent to `v == 3.7.*`
+            (Bound::Included(v1), Bound::Excluded(v2))
+            if v1.release().len() == 2
+                && v2.release() == [v1.release()[0], v1.release()[1] + 1] =>
+                {
+                    (
+                        Some(VersionSpecifier::equals_star_version(v1.clone())),
+                        None,
+                    )
+                }
+            (lower, upper) => (
+                VersionSpecifier::from_lower_bound(lower),
+                VersionSpecifier::from_upper_bound(upper),
+            ),
+        };
+
+        b1.into_iter().chain(b2)
+    }
+
+    /// Returns a version specifier representing the given lower bound.
+    pub fn from_lower_bound(bound: &Bound<Version>) -> Option<VersionSpecifier> {
+        match bound {
+            Bound::Included(version) => Some(
+                VersionSpecifier::from_version(Operator::GreaterThanEqual, version.clone())
+                    .unwrap(),
+            ),
+            Bound::Excluded(version) => Some(
+                VersionSpecifier::from_version(Operator::GreaterThan, version.clone()).unwrap(),
+            ),
+            Bound::Unbounded => None,
+        }
+    }
+
+    /// Returns a version specifier representing the given upper bound.
+    pub fn from_upper_bound(bound: &Bound<Version>) -> Option<VersionSpecifier> {
+        match bound {
+            Bound::Included(version) => Some(
+                VersionSpecifier::from_version(Operator::LessThanEqual, version.clone()).unwrap(),
+            ),
+            Bound::Excluded(version) => {
+                Some(VersionSpecifier::from_version(Operator::LessThan, version.clone()).unwrap())
+            }
+            Bound::Unbounded => None,
+        }
+    }
+
+    /// Whether the given version satisfies the version range.
     ///
-    /// Unlike `pypa/packaging`, prereleases are included by default
+    /// For example, `>=1.19,<2.0` contains `1.21`, but not `2.0`.
     ///
-    /// I'm utterly non-confident in the description in PEP 440 and apparently even pip got some
-    /// of that wrong, e.g. <https://github.com/pypa/pip/issues/9121> and
-    /// <https://github.com/pypa/pip/issues/5503>, and also i'm not sure if it produces the correct
-    /// behaviour from a user perspective
-    ///
-    /// This implementation is as close as possible to
-    /// <https://github.com/pypa/packaging/blob/e184feef1a28a5c574ec41f5c263a3a573861f5a/packaging/specifiers.py#L362-L496>
+    /// See:
+    /// - <https://peps.python.org/pep-0440/#version-specifiers>
+    /// - <https://github.com/pypa/packaging/blob/e184feef1a28a5c574ec41f5c263a3a573861f5a/packaging/specifiers.py#L362-L496>
     pub fn contains(&self, version: &Version) -> bool {
         // "Except where specifically noted below, local version identifiers MUST NOT be permitted
         // in version specifiers, and local version labels MUST be ignored entirely when checking
         // if candidate versions match a given version specifier."
-        let (this, other) = if !self.version.local().is_empty() {
-            (self.version.clone(), version.clone())
-        } else {
+        let (this, other) = if self.version.local().is_empty() {
             // self is already without local
-            (
-                self.version.clone().without_local(),
-                version.clone().without_local(),
-            )
+            (self.version.clone(), version.clone().without_local())
+        } else {
+            (self.version.clone(), version.clone())
         };
 
         match self.operator {
@@ -433,11 +444,11 @@ impl VersionSpecifier {
             Operator::EqualStar => {
                 this.epoch() == other.epoch()
                     && self
-                        .version
-                        .release()
-                        .iter()
-                        .zip(other.release())
-                        .all(|(this, other)| this == other)
+                    .version
+                    .release()
+                    .iter()
+                    .zip(other.release())
+                    .all(|(this, other)| this == other)
             }
             #[allow(deprecated)]
             Operator::ExactEqual => {
@@ -451,10 +462,10 @@ impl VersionSpecifier {
             Operator::NotEqualStar => {
                 this.epoch() != other.epoch()
                     || !this
-                        .release()
-                        .iter()
-                        .zip(version.release())
-                        .all(|(this, other)| this == other)
+                    .release()
+                    .iter()
+                    .zip(version.release())
+                    .all(|(this, other)| this == other)
             }
             Operator::TildeEqual => {
                 // "For a given release identifier V.N, the compatible release clause is
@@ -474,7 +485,7 @@ impl VersionSpecifier {
                     return false;
                 }
 
-                // According to PEP 440, this ignores the prerelease special rules
+                // According to PEP 440, this ignores the pre-release special rules
                 // pypa/packaging disagrees: https://github.com/pypa/packaging/issues/617
                 other >= this
             }
@@ -483,8 +494,8 @@ impl VersionSpecifier {
             Operator::LessThan => {
                 Self::less_than(&this, &other)
                     && !(version::compare_release(this.release(), other.release())
-                        == Ordering::Equal
-                        && other.any_prerelease())
+                    == Ordering::Equal
+                    && other.any_prerelease())
             }
             Operator::LessThanEqual => Self::less_than(&this, &other) || other <= this,
         }
@@ -531,6 +542,22 @@ impl VersionSpecifier {
 
         other > this
     }
+
+    /// Whether this version specifier rejects versions below a lower cutoff.
+    pub fn has_lower_bound(&self) -> bool {
+        match self.operator() {
+            Operator::Equal
+            | Operator::EqualStar
+            | Operator::ExactEqual
+            | Operator::TildeEqual
+            | Operator::GreaterThan
+            | Operator::GreaterThanEqual => true,
+            Operator::LessThanEqual
+            | Operator::LessThan
+            | Operator::NotEqualStar
+            | Operator::NotEqual => false,
+        }
+    }
 }
 
 impl FromStr for VersionSpecifier {
@@ -553,7 +580,7 @@ impl FromStr for VersionSpecifier {
         }
         let vpat = version.parse().map_err(ParseErrorKind::InvalidVersion)?;
         let version_specifier =
-            VersionSpecifier::new(operator, vpat).map_err(ParseErrorKind::InvalidSpecifier)?;
+            Self::from_pattern(operator, vpat).map_err(ParseErrorKind::InvalidSpecifier)?;
         s.eat_while(|c: char| c.is_whitespace());
         if !s.done() {
             return Err(ParseErrorKind::InvalidTrailing(s.after().to_string()).into());
@@ -591,7 +618,7 @@ impl std::fmt::Display for VersionSpecifierBuildError {
                 let local = version
                     .local()
                     .iter()
-                    .map(|segment| segment.to_string())
+                    .map(ToString::to_string)
                     .collect::<Vec<String>>()
                     .join(".");
                 write!(
@@ -641,8 +668,8 @@ enum BuildErrorKind {
 }
 
 impl From<BuildErrorKind> for VersionSpecifierBuildError {
-    fn from(kind: BuildErrorKind) -> VersionSpecifierBuildError {
-        VersionSpecifierBuildError {
+    fn from(kind: BuildErrorKind) -> Self {
+        Self {
             kind: Box::new(kind),
         }
     }
@@ -695,8 +722,8 @@ enum ParseErrorKind {
 }
 
 impl From<ParseErrorKind> for VersionSpecifierParseError {
-    fn from(kind: ParseErrorKind) -> VersionSpecifierParseError {
-        VersionSpecifierParseError {
+    fn from(kind: ParseErrorKind) -> Self {
+        Self {
             kind: Box::new(kind),
         }
     }
@@ -740,7 +767,7 @@ mod tests {
 
     use indoc::indoc;
 
-    use crate::{LocalSegment, PreRelease, PreReleaseKind};
+    use crate::LocalSegment;
 
     use super::*;
 
@@ -833,7 +860,7 @@ mod tests {
 
         // Below we'll generate every possible combination of VERSIONS_ALL that
         // should be true for the given operator
-        let operations: Vec<_> = [
+        let operations = [
             // Verify that the less than (<) operator works correctly
             versions
                 .iter()
@@ -856,9 +883,8 @@ mod tests {
                 .flat_map(|(i, x)| versions[..i].iter().map(move |y| (x, y, Ordering::Greater)))
                 .collect::<Vec<_>>(),
         ]
-        .into_iter()
-        .flatten()
-        .collect();
+            .into_iter()
+            .flatten();
 
         for (a, b, ordering) in operations {
             assert_eq!(a.cmp(b), ordering, "{a} {ordering:?} {b}");
@@ -989,24 +1015,20 @@ mod tests {
     /// Well, except for <https://github.com/pypa/packaging/issues/617>
     #[test]
     fn test_operators_other() {
-        let versions: Vec<Version> = VERSIONS_0
+        let versions = VERSIONS_0
             .iter()
-            .map(|version| Version::from_str(version).unwrap())
-            .collect();
+            .map(|version| Version::from_str(version).unwrap());
         let specifiers: Vec<_> = SPECIFIERS_OTHER
             .iter()
             .map(|specifier| VersionSpecifier::from_str(specifier).unwrap())
             .collect();
 
-        for (version, expected) in versions.iter().zip(EXPECTED_OTHER) {
+        for (version, expected) in versions.zip(EXPECTED_OTHER) {
             let actual = specifiers
                 .iter()
-                .map(|specifier| specifier.contains(version))
-                .collect::<Vec<bool>>();
-            for ((actual, expected), _specifier) in
-                actual.iter().zip(expected).zip(SPECIFIERS_OTHER)
-            {
-                assert_eq!(actual, expected);
+                .map(|specifier| specifier.contains(&version));
+            for ((actual, expected), _specifier) in actual.zip(expected).zip(SPECIFIERS_OTHER) {
+                assert_eq!(actual, *expected);
             }
         }
     }
@@ -1258,11 +1280,11 @@ mod tests {
         let result = VersionSpecifiers::from_str("~= 0.9, %‍= 1.0, != 1.3.4.*");
         assert_eq!(
             result.unwrap_err().to_string(),
-            indoc! {r#"
+            indoc! {r"
                 Failed to parse version: Unexpected end of version specifier, expected operator:
                 ~= 0.9, %‍= 1.0, != 1.3.4.*
                        ^^^^^^^
-            "#}
+            "}
         );
     }
 
@@ -1312,7 +1334,7 @@ mod tests {
                 ParseErrorKind::InvalidOperator(OperatorParseError {
                     got: "=>".to_string(),
                 })
-                .into(),
+                    .into(),
             ),
             // Version-less specifier
             ("==", ParseErrorKind::MissingVersion.into()),
@@ -1324,9 +1346,9 @@ mod tests {
                         operator: Operator::TildeEqual,
                         version: Version::new([1, 0]).with_local(vec![LocalSegment::Number(5)]),
                     }
-                    .into(),
+                        .into(),
                 )
-                .into(),
+                    .into(),
             ),
             (
                 ">=1.0+deadbeef",
@@ -1336,9 +1358,9 @@ mod tests {
                         version: Version::new([1, 0])
                             .with_local(vec![LocalSegment::String("deadbeef".to_string())]),
                     }
-                    .into(),
+                        .into(),
                 )
-                .into(),
+                    .into(),
             ),
             (
                 "<=1.0+abc123",
@@ -1348,9 +1370,9 @@ mod tests {
                         version: Version::new([1, 0])
                             .with_local(vec![LocalSegment::String("abc123".to_string())]),
                     }
-                    .into(),
+                        .into(),
                 )
-                .into(),
+                    .into(),
             ),
             (
                 ">1.0+watwat",
@@ -1360,9 +1382,9 @@ mod tests {
                         version: Version::new([1, 0])
                             .with_local(vec![LocalSegment::String("watwat".to_string())]),
                     }
-                    .into(),
+                        .into(),
                 )
-                .into(),
+                    .into(),
             ),
             (
                 "<1.0+1.0",
@@ -1372,9 +1394,9 @@ mod tests {
                         version: Version::new([1, 0])
                             .with_local(vec![LocalSegment::Number(1), LocalSegment::Number(0)]),
                     }
-                    .into(),
+                        .into(),
                 )
-                .into(),
+                    .into(),
             ),
             // Prefix matching on operators which don't support them
             (
@@ -1383,9 +1405,9 @@ mod tests {
                     BuildErrorKind::OperatorWithStar {
                         operator: Operator::TildeEqual,
                     }
-                    .into(),
+                        .into(),
                 )
-                .into(),
+                    .into(),
             ),
             (
                 ">=1.0.*",
@@ -1393,9 +1415,9 @@ mod tests {
                     BuildErrorKind::OperatorWithStar {
                         operator: Operator::GreaterThanEqual,
                     }
-                    .into(),
+                        .into(),
                 )
-                .into(),
+                    .into(),
             ),
             (
                 "<=1.0.*",
@@ -1403,9 +1425,9 @@ mod tests {
                     BuildErrorKind::OperatorWithStar {
                         operator: Operator::LessThanEqual,
                     }
-                    .into(),
+                        .into(),
                 )
-                .into(),
+                    .into(),
             ),
             (
                 ">1.0.*",
@@ -1413,9 +1435,9 @@ mod tests {
                     BuildErrorKind::OperatorWithStar {
                         operator: Operator::GreaterThan,
                     }
-                    .into(),
+                        .into(),
                 )
-                .into(),
+                    .into(),
             ),
             (
                 "<1.0.*",
@@ -1423,9 +1445,9 @@ mod tests {
                     BuildErrorKind::OperatorWithStar {
                         operator: Operator::LessThan,
                     }
-                    .into(),
+                        .into(),
                 )
-                .into(),
+                    .into(),
             ),
             // Combination of local and prefix matching on operators which do
             // support one or the other
@@ -1434,14 +1456,14 @@ mod tests {
                 ParseErrorKind::InvalidVersion(
                     version::PatternErrorKind::WildcardNotTrailing.into(),
                 )
-                .into(),
+                    .into(),
             ),
             (
                 "!=1.0.*+deadbeef",
                 ParseErrorKind::InvalidVersion(
                     version::PatternErrorKind::WildcardNotTrailing.into(),
                 )
-                .into(),
+                    .into(),
             ),
             // Prefix matching cannot be used with a pre-release, post-release,
             // dev or local version
@@ -1449,87 +1471,81 @@ mod tests {
                 "==2.0a1.*",
                 ParseErrorKind::InvalidVersion(
                     version::ErrorKind::UnexpectedEnd {
-                        version: Version::new([2, 0]).with_pre(Some(PreRelease {
-                            kind: PreReleaseKind::Alpha,
-                            number: 1,
-                        })),
+                        version: "2.0a1".to_string(),
                         remaining: ".*".to_string(),
                     }
-                    .into(),
+                        .into(),
                 )
-                .into(),
+                    .into(),
             ),
             (
                 "!=2.0a1.*",
                 ParseErrorKind::InvalidVersion(
                     version::ErrorKind::UnexpectedEnd {
-                        version: Version::new([2, 0]).with_pre(Some(PreRelease {
-                            kind: PreReleaseKind::Alpha,
-                            number: 1,
-                        })),
+                        version: "2.0a1".to_string(),
                         remaining: ".*".to_string(),
                     }
-                    .into(),
+                        .into(),
                 )
-                .into(),
+                    .into(),
             ),
             (
                 "==2.0.post1.*",
                 ParseErrorKind::InvalidVersion(
                     version::ErrorKind::UnexpectedEnd {
-                        version: Version::new([2, 0]).with_post(Some(1)),
+                        version: "2.0.post1".to_string(),
                         remaining: ".*".to_string(),
                     }
-                    .into(),
+                        .into(),
                 )
-                .into(),
+                    .into(),
             ),
             (
                 "!=2.0.post1.*",
                 ParseErrorKind::InvalidVersion(
                     version::ErrorKind::UnexpectedEnd {
-                        version: Version::new([2, 0]).with_post(Some(1)),
+                        version: "2.0.post1".to_string(),
                         remaining: ".*".to_string(),
                     }
-                    .into(),
+                        .into(),
                 )
-                .into(),
+                    .into(),
             ),
             (
                 "==2.0.dev1.*",
                 ParseErrorKind::InvalidVersion(
                     version::ErrorKind::UnexpectedEnd {
-                        version: Version::new([2, 0]).with_dev(Some(1)),
+                        version: "2.0.dev1".to_string(),
                         remaining: ".*".to_string(),
                     }
-                    .into(),
+                        .into(),
                 )
-                .into(),
+                    .into(),
             ),
             (
                 "!=2.0.dev1.*",
                 ParseErrorKind::InvalidVersion(
                     version::ErrorKind::UnexpectedEnd {
-                        version: Version::new([2, 0]).with_dev(Some(1)),
+                        version: "2.0.dev1".to_string(),
                         remaining: ".*".to_string(),
                     }
-                    .into(),
+                        .into(),
                 )
-                .into(),
+                    .into(),
             ),
             (
                 "==1.0+5.*",
                 ParseErrorKind::InvalidVersion(
                     version::ErrorKind::LocalEmpty { precursor: '.' }.into(),
                 )
-                .into(),
+                    .into(),
             ),
             (
                 "!=1.0+deadbeef.*",
                 ParseErrorKind::InvalidVersion(
                     version::ErrorKind::LocalEmpty { precursor: '.' }.into(),
                 )
-                .into(),
+                    .into(),
             ),
             // Prefix matching must appear at the end
             (
@@ -1537,7 +1553,7 @@ mod tests {
                 ParseErrorKind::InvalidVersion(
                     version::PatternErrorKind::WildcardNotTrailing.into(),
                 )
-                .into(),
+                    .into(),
             ),
             // Compatible operator requires 2 digits in the release operator
             (
@@ -1549,23 +1565,23 @@ mod tests {
                 "==1.0.dev1.*",
                 ParseErrorKind::InvalidVersion(
                     version::ErrorKind::UnexpectedEnd {
-                        version: Version::new([1, 0]).with_dev(Some(1)),
+                        version: "1.0.dev1".to_string(),
                         remaining: ".*".to_string(),
                     }
-                    .into(),
+                        .into(),
                 )
-                .into(),
+                    .into(),
             ),
             (
                 "!=1.0.dev1.*",
                 ParseErrorKind::InvalidVersion(
                     version::ErrorKind::UnexpectedEnd {
-                        version: Version::new([1, 0]).with_dev(Some(1)),
+                        version: "1.0.dev1".to_string(),
                         remaining: ".*".to_string(),
                     }
-                    .into(),
+                        .into(),
                 )
-                .into(),
+                    .into(),
             ),
         ];
         for (specifier, error) in specifiers {
@@ -1599,7 +1615,7 @@ mod tests {
             VersionSpecifiers::from_str(">=3.7, <      4.0, != 3.9.0")
                 .unwrap()
                 .to_string(),
-            ">=3.7, <4.0, !=3.9.0"
+            ">=3.7, !=3.9.0, <4.0"
         );
     }
 
@@ -1677,7 +1693,7 @@ Failed to parse version: Unexpected end of version specifier, expected operator:
         let op = Operator::TildeEqual;
         let v = Version::new([5]);
         let vpat = VersionPattern::verbatim(v);
-        assert_eq!(err, VersionSpecifier::new(op, vpat).unwrap_err());
+        assert_eq!(err, VersionSpecifier::from_pattern(op, vpat).unwrap_err());
         assert_eq!(
             err.to_string(),
             "The ~= operator requires at least two segments in the release version"

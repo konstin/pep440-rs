@@ -1,3 +1,9 @@
+# 0.7.0
+
+* Sync from uv vendored version
+* Remove pyo3 bindings
+* Update rkyv to 0.8
+
 ## 0.6.6
 
 * Add `VersionSpecifiers::empty()`, which is present in the uv version of this crate but missing here.
