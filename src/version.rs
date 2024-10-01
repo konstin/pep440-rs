@@ -289,7 +289,7 @@ impl Version {
     #[inline]
     pub fn new<I, R>(release_numbers: I) -> Self
     where
-        I: IntoIterator<Item=R>,
+        I: IntoIterator<Item = R>,
         R: Borrow<u64>,
     {
         Self {
@@ -297,7 +297,7 @@ impl Version {
                 small: VersionSmall::new(),
             }),
         }
-            .with_release(release_numbers)
+        .with_release(release_numbers)
     }
 
     /// Whether this is an alpha/beta/rc or dev version
@@ -433,7 +433,7 @@ impl Version {
     #[must_use]
     pub fn with_release<I, R>(mut self, release_numbers: I) -> Self
     where
-        I: IntoIterator<Item=R>,
+        I: IntoIterator<Item = R>,
         R: Borrow<u64>,
     {
         self.clear_release();
@@ -2315,9 +2315,9 @@ fn sortable_tuple(version: &Version) -> (u64, u64, Option<u64>, u64, &[LocalSegm
         // alpha release
         (
             Some(Prerelease {
-                     kind: PrereleaseKind::Alpha,
-                     number: n,
-                 }),
+                kind: PrereleaseKind::Alpha,
+                number: n,
+            }),
             post,
             dev,
             None,
@@ -2325,9 +2325,9 @@ fn sortable_tuple(version: &Version) -> (u64, u64, Option<u64>, u64, &[LocalSegm
         // beta release
         (
             Some(Prerelease {
-                     kind: PrereleaseKind::Beta,
-                     number: n,
-                 }),
+                kind: PrereleaseKind::Beta,
+                number: n,
+            }),
             post,
             dev,
             None,
@@ -2335,9 +2335,9 @@ fn sortable_tuple(version: &Version) -> (u64, u64, Option<u64>, u64, &[LocalSegm
         // alpha release
         (
             Some(Prerelease {
-                     kind: PrereleaseKind::Rc,
-                     number: n,
-                 }),
+                kind: PrereleaseKind::Rc,
+                number: n,
+            }),
             post,
             dev,
             None,
@@ -3434,7 +3434,7 @@ mod tests {
             ErrorKind::NumberTooBig {
                 bytes: b"18446744073709551616".to_vec()
             }
-                .into()
+            .into()
         );
         assert_eq!(p("5!"), ErrorKind::NoLeadingReleaseNumber.into());
         assert_eq!(
@@ -3443,7 +3443,7 @@ mod tests {
                 version: "5.6".to_string(),
                 remaining: "./".to_string()
             }
-                .into()
+            .into()
         );
         assert_eq!(
             p("5.6.-alpha2"),
@@ -3451,14 +3451,14 @@ mod tests {
                 version: "5.6".to_string(),
                 remaining: ".-alpha2".to_string()
             }
-                .into()
+            .into()
         );
         assert_eq!(
             p("1.2.3a18446744073709551616"),
             ErrorKind::NumberTooBig {
                 bytes: b"18446744073709551616".to_vec()
             }
-                .into()
+            .into()
         );
         assert_eq!(p("5+"), ErrorKind::LocalEmpty { precursor: '+' }.into());
         assert_eq!(p("5+ "), ErrorKind::LocalEmpty { precursor: '+' }.into());
@@ -3475,7 +3475,7 @@ mod tests {
                 version: "5.6".to_string(),
                 remaining: "-".to_string()
             }
-                .into()
+            .into()
         );
     }
 
@@ -3694,21 +3694,21 @@ mod tests {
             Err(ErrorKind::NumberTooBig {
                 bytes: b"18446744073709551616".to_vec()
             }
-                .into())
+            .into())
         );
         assert_eq!(
             p("18446744073799551615abc"),
             Err(ErrorKind::NumberTooBig {
                 bytes: b"18446744073799551615abc".to_vec()
             }
-                .into())
+            .into())
         );
         assert_eq!(
             parse_u64(b"18446744073799551615\xFF"),
             Err(ErrorKind::NumberTooBig {
                 bytes: b"18446744073799551615\xFF".to_vec()
             }
-                .into())
+            .into())
         );
     }
 

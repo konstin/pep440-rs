@@ -72,7 +72,7 @@ impl VersionSpecifiers {
 }
 
 impl FromIterator<VersionSpecifier> for VersionSpecifiers {
-    fn from_iter<T: IntoIterator<Item=VersionSpecifier>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item = VersionSpecifier>>(iter: T) -> Self {
         Self::from_unsorted(iter.into_iter().collect())
     }
 }
@@ -370,21 +370,21 @@ impl VersionSpecifier {
     /// This function is not applicable to ranges involving pre-release versions.
     pub fn from_release_only_bounds(
         bounds: (&Bound<Version>, &Bound<Version>),
-    ) -> impl Iterator<Item=VersionSpecifier> {
+    ) -> impl Iterator<Item = VersionSpecifier> {
         let (b1, b2) = match bounds {
             (Bound::Included(v1), Bound::Included(v2)) if v1 == v2 => {
                 (Some(VersionSpecifier::equals_version(v1.clone())), None)
             }
             // `v >= 3.7 && v < 3.8` is equivalent to `v == 3.7.*`
             (Bound::Included(v1), Bound::Excluded(v2))
-            if v1.release().len() == 2
-                && v2.release() == [v1.release()[0], v1.release()[1] + 1] =>
-                {
-                    (
-                        Some(VersionSpecifier::equals_star_version(v1.clone())),
-                        None,
-                    )
-                }
+                if v1.release().len() == 2
+                    && v2.release() == [v1.release()[0], v1.release()[1] + 1] =>
+            {
+                (
+                    Some(VersionSpecifier::equals_star_version(v1.clone())),
+                    None,
+                )
+            }
             (lower, upper) => (
                 VersionSpecifier::from_lower_bound(lower),
                 VersionSpecifier::from_upper_bound(upper),
@@ -444,11 +444,11 @@ impl VersionSpecifier {
             Operator::EqualStar => {
                 this.epoch() == other.epoch()
                     && self
-                    .version
-                    .release()
-                    .iter()
-                    .zip(other.release())
-                    .all(|(this, other)| this == other)
+                        .version
+                        .release()
+                        .iter()
+                        .zip(other.release())
+                        .all(|(this, other)| this == other)
             }
             #[allow(deprecated)]
             Operator::ExactEqual => {
@@ -462,10 +462,10 @@ impl VersionSpecifier {
             Operator::NotEqualStar => {
                 this.epoch() != other.epoch()
                     || !this
-                    .release()
-                    .iter()
-                    .zip(version.release())
-                    .all(|(this, other)| this == other)
+                        .release()
+                        .iter()
+                        .zip(version.release())
+                        .all(|(this, other)| this == other)
             }
             Operator::TildeEqual => {
                 // "For a given release identifier V.N, the compatible release clause is
@@ -494,8 +494,8 @@ impl VersionSpecifier {
             Operator::LessThan => {
                 Self::less_than(&this, &other)
                     && !(version::compare_release(this.release(), other.release())
-                    == Ordering::Equal
-                    && other.any_prerelease())
+                        == Ordering::Equal
+                        && other.any_prerelease())
             }
             Operator::LessThanEqual => Self::less_than(&this, &other) || other <= this,
         }
@@ -883,8 +883,8 @@ mod tests {
                 .flat_map(|(i, x)| versions[..i].iter().map(move |y| (x, y, Ordering::Greater)))
                 .collect::<Vec<_>>(),
         ]
-            .into_iter()
-            .flatten();
+        .into_iter()
+        .flatten();
 
         for (a, b, ordering) in operations {
             assert_eq!(a.cmp(b), ordering, "{a} {ordering:?} {b}");
@@ -1334,7 +1334,7 @@ mod tests {
                 ParseErrorKind::InvalidOperator(OperatorParseError {
                     got: "=>".to_string(),
                 })
-                    .into(),
+                .into(),
             ),
             // Version-less specifier
             ("==", ParseErrorKind::MissingVersion.into()),
@@ -1346,9 +1346,9 @@ mod tests {
                         operator: Operator::TildeEqual,
                         version: Version::new([1, 0]).with_local(vec![LocalSegment::Number(5)]),
                     }
-                        .into(),
-                )
                     .into(),
+                )
+                .into(),
             ),
             (
                 ">=1.0+deadbeef",
@@ -1358,9 +1358,9 @@ mod tests {
                         version: Version::new([1, 0])
                             .with_local(vec![LocalSegment::String("deadbeef".to_string())]),
                     }
-                        .into(),
-                )
                     .into(),
+                )
+                .into(),
             ),
             (
                 "<=1.0+abc123",
@@ -1370,9 +1370,9 @@ mod tests {
                         version: Version::new([1, 0])
                             .with_local(vec![LocalSegment::String("abc123".to_string())]),
                     }
-                        .into(),
-                )
                     .into(),
+                )
+                .into(),
             ),
             (
                 ">1.0+watwat",
@@ -1382,9 +1382,9 @@ mod tests {
                         version: Version::new([1, 0])
                             .with_local(vec![LocalSegment::String("watwat".to_string())]),
                     }
-                        .into(),
-                )
                     .into(),
+                )
+                .into(),
             ),
             (
                 "<1.0+1.0",
@@ -1394,9 +1394,9 @@ mod tests {
                         version: Version::new([1, 0])
                             .with_local(vec![LocalSegment::Number(1), LocalSegment::Number(0)]),
                     }
-                        .into(),
-                )
                     .into(),
+                )
+                .into(),
             ),
             // Prefix matching on operators which don't support them
             (
@@ -1405,9 +1405,9 @@ mod tests {
                     BuildErrorKind::OperatorWithStar {
                         operator: Operator::TildeEqual,
                     }
-                        .into(),
-                )
                     .into(),
+                )
+                .into(),
             ),
             (
                 ">=1.0.*",
@@ -1415,9 +1415,9 @@ mod tests {
                     BuildErrorKind::OperatorWithStar {
                         operator: Operator::GreaterThanEqual,
                     }
-                        .into(),
-                )
                     .into(),
+                )
+                .into(),
             ),
             (
                 "<=1.0.*",
@@ -1425,9 +1425,9 @@ mod tests {
                     BuildErrorKind::OperatorWithStar {
                         operator: Operator::LessThanEqual,
                     }
-                        .into(),
-                )
                     .into(),
+                )
+                .into(),
             ),
             (
                 ">1.0.*",
@@ -1435,9 +1435,9 @@ mod tests {
                     BuildErrorKind::OperatorWithStar {
                         operator: Operator::GreaterThan,
                     }
-                        .into(),
-                )
                     .into(),
+                )
+                .into(),
             ),
             (
                 "<1.0.*",
@@ -1445,9 +1445,9 @@ mod tests {
                     BuildErrorKind::OperatorWithStar {
                         operator: Operator::LessThan,
                     }
-                        .into(),
-                )
                     .into(),
+                )
+                .into(),
             ),
             // Combination of local and prefix matching on operators which do
             // support one or the other
@@ -1456,14 +1456,14 @@ mod tests {
                 ParseErrorKind::InvalidVersion(
                     version::PatternErrorKind::WildcardNotTrailing.into(),
                 )
-                    .into(),
+                .into(),
             ),
             (
                 "!=1.0.*+deadbeef",
                 ParseErrorKind::InvalidVersion(
                     version::PatternErrorKind::WildcardNotTrailing.into(),
                 )
-                    .into(),
+                .into(),
             ),
             // Prefix matching cannot be used with a pre-release, post-release,
             // dev or local version
@@ -1474,9 +1474,9 @@ mod tests {
                         version: "2.0a1".to_string(),
                         remaining: ".*".to_string(),
                     }
-                        .into(),
-                )
                     .into(),
+                )
+                .into(),
             ),
             (
                 "!=2.0a1.*",
@@ -1485,9 +1485,9 @@ mod tests {
                         version: "2.0a1".to_string(),
                         remaining: ".*".to_string(),
                     }
-                        .into(),
-                )
                     .into(),
+                )
+                .into(),
             ),
             (
                 "==2.0.post1.*",
@@ -1496,9 +1496,9 @@ mod tests {
                         version: "2.0.post1".to_string(),
                         remaining: ".*".to_string(),
                     }
-                        .into(),
-                )
                     .into(),
+                )
+                .into(),
             ),
             (
                 "!=2.0.post1.*",
@@ -1507,9 +1507,9 @@ mod tests {
                         version: "2.0.post1".to_string(),
                         remaining: ".*".to_string(),
                     }
-                        .into(),
-                )
                     .into(),
+                )
+                .into(),
             ),
             (
                 "==2.0.dev1.*",
@@ -1518,9 +1518,9 @@ mod tests {
                         version: "2.0.dev1".to_string(),
                         remaining: ".*".to_string(),
                     }
-                        .into(),
-                )
                     .into(),
+                )
+                .into(),
             ),
             (
                 "!=2.0.dev1.*",
@@ -1529,23 +1529,23 @@ mod tests {
                         version: "2.0.dev1".to_string(),
                         remaining: ".*".to_string(),
                     }
-                        .into(),
-                )
                     .into(),
+                )
+                .into(),
             ),
             (
                 "==1.0+5.*",
                 ParseErrorKind::InvalidVersion(
                     version::ErrorKind::LocalEmpty { precursor: '.' }.into(),
                 )
-                    .into(),
+                .into(),
             ),
             (
                 "!=1.0+deadbeef.*",
                 ParseErrorKind::InvalidVersion(
                     version::ErrorKind::LocalEmpty { precursor: '.' }.into(),
                 )
-                    .into(),
+                .into(),
             ),
             // Prefix matching must appear at the end
             (
@@ -1553,7 +1553,7 @@ mod tests {
                 ParseErrorKind::InvalidVersion(
                     version::PatternErrorKind::WildcardNotTrailing.into(),
                 )
-                    .into(),
+                .into(),
             ),
             // Compatible operator requires 2 digits in the release operator
             (
@@ -1568,9 +1568,9 @@ mod tests {
                         version: "1.0.dev1".to_string(),
                         remaining: ".*".to_string(),
                     }
-                        .into(),
-                )
                     .into(),
+                )
+                .into(),
             ),
             (
                 "!=1.0.dev1.*",
@@ -1579,9 +1579,9 @@ mod tests {
                         version: "1.0.dev1".to_string(),
                         remaining: ".*".to_string(),
                     }
-                        .into(),
-                )
                     .into(),
+                )
+                .into(),
             ),
         ];
         for (specifier, error) in specifiers {
