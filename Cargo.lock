@@ -90,7 +90,7 @@ dependencies = [
 
 [[package]]
 name = "pep440_rs"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "indoc",
  "rkyv",

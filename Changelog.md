@@ -1,5 +1,9 @@
 # 0.7.0
 
+* Make rkyv optional
+
+# 0.7.0
+
 * Sync from uv vendored version
 * Remove pyo3 bindings
 * Update rkyv to 0.8
