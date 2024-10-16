@@ -2392,3 +2392,6 @@ fn parse_u64(bytes: &[u8]) -> Result<u64, VersionParseError> {
 /// The minimum version that can be represented by a [`Version`]: `0a0.dev0`.
 pub static MIN_VERSION: LazyLock<Version> =
     LazyLock::new(|| Version::from_str("0a0.dev0").unwrap());
+
+#[cfg(test)]
+mod tests;

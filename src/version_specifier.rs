@@ -746,3 +746,6 @@ pub(crate) fn parse_version_specifiers(
     }
     Ok(version_ranges)
 }
+
+#[cfg(test)]
+mod tests;
