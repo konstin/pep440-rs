@@ -24,6 +24,8 @@ jobs:
         run: cargo clippy --tests -- -D warnings
       - name: Clippy (pyo3)
         run: cargo clippy --tests --all-features -- -D warnings
+      - name: Check semver
+        uses: obi1kenobi/cargo-semver-checks-action@v2
 
   test-rust:
     runs-on: ubuntu-latest
