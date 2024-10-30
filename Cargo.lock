@@ -90,7 +90,7 @@ dependencies = [
 
 [[package]]
 name = "pep440_rs"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "indoc",
  "rkyv",
@@ -98,6 +98,7 @@ dependencies = [
  "tracing",
  "unicode-width",
  "unscanny",
+ "version-ranges",
 ]
 
 [[package]]
@@ -225,6 +226,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3a9fe34e3e7a50316060351f37187a3f546bce95496156754b601a5fa71b76e"
 
 [[package]]
+name = "smallvec"
+version = "1.13.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
+
+[[package]]
 name = "syn"
 version = "2.0.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -304,3 +311,12 @@ name = "uuid"
 version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81dfa00651efa65069b0b6b651f4aaa31ba9e3c3ce0137aaad053604ee7e0314"
+
+[[package]]
+name = "version-ranges"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "284649eba55872c1253f3f6ec15f22303a784e60684babd01d01e4c6ebb85b91"
+dependencies = [
+ "smallvec",
+]

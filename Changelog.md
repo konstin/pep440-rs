@@ -1,4 +1,8 @@
-# 0.7.0
+# 0.7.2
+
+* Add optional conversion to [version-ranges](https://crates.io/crates/version-ranges).
+
+# 0.7.1
 
 * Make rkyv optional
 

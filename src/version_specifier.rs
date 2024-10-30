@@ -2,11 +2,12 @@ use std::cmp::Ordering;
 use std::ops::Bound;
 use std::str::FromStr;
 
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
-
 use crate::{
     version, Operator, OperatorParseError, Version, VersionPattern, VersionPatternParseError,
 };
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+#[cfg(feature = "tracing")]
+use tracing::warn;
 
 /// Sorted version specifiers, such as `>=2.1,<3`.
 ///
@@ -62,11 +63,61 @@ impl VersionSpecifiers {
         specifiers.sort_by(|a, b| a.version().cmp(b.version()));
         Self(specifiers)
     }
+
+    /// Returns the [`VersionSpecifiers`] whose union represents the given range.
+    ///
+    /// This function is not applicable to ranges involving pre-release versions.
+    pub fn from_release_only_bounds<'a>(
+        mut bounds: impl Iterator<Item = (&'a Bound<Version>, &'a Bound<Version>)>,
+    ) -> Self {
+        let mut specifiers = Vec::new();
+
+        let Some((start, mut next)) = bounds.next() else {
+            return Self::empty();
+        };
+
+        // Add specifiers for the holes between the bounds.
+        for (lower, upper) in bounds {
+            match (next, lower) {
+                // Ex) [3.7, 3.8.5), (3.8.5, 3.9] -> >=3.7,!=3.8.5,<=3.9
+                (Bound::Excluded(prev), Bound::Excluded(lower)) if prev == lower => {
+                    specifiers.push(VersionSpecifier::not_equals_version(prev.clone()));
+                }
+                // Ex) [3.7, 3.8), (3.8, 3.9] -> >=3.7,!=3.8.*,<=3.9
+                (Bound::Excluded(prev), Bound::Included(lower))
+                    if prev.release().len() == 2
+                        && lower.release() == [prev.release()[0], prev.release()[1] + 1] =>
+                {
+                    specifiers.push(VersionSpecifier::not_equals_star_version(prev.clone()));
+                }
+                _ => {
+                    #[cfg(feature = "tracing")]
+                    warn!("Ignoring unsupported gap in `requires-python` version: {next:?} -> {lower:?}");
+                }
+            }
+            next = upper;
+        }
+        let end = next;
+
+        // Add the specifiers for the bounding range.
+        specifiers.extend(VersionSpecifier::from_release_only_bounds((start, end)));
+
+        Self::from_unsorted(specifiers)
+    }
 }
 
 impl FromIterator<VersionSpecifier> for VersionSpecifiers {
     fn from_iter<T: IntoIterator<Item = VersionSpecifier>>(iter: T) -> Self {
         Self::from_unsorted(iter.into_iter().collect())
+    }
+}
+
+impl IntoIterator for VersionSpecifiers {
+    type Item = VersionSpecifier;
+    type IntoIter = std::vec::IntoIter<VersionSpecifier>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 
