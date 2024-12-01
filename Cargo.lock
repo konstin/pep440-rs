@@ -311,9 +311,9 @@ checksum = "f8c5f0a0af699448548ad1a2fbf920fb4bee257eae39953ba95cb84891a0446a"
 
 [[package]]
 name = "version-ranges"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "284649eba55872c1253f3f6ec15f22303a784e60684babd01d01e4c6ebb85b91"
+checksum = "f8d079415ceb2be83fc355adbadafe401307d5c309c7e6ade6638e6f9f42f42d"
 dependencies = [
  "smallvec",
 ]
