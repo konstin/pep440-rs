@@ -1,5 +1,5 @@
+use once_cell::sync::Lazy;
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
-use std::sync::LazyLock;
 use std::{
     borrow::Borrow,
     cmp::Ordering,
@@ -2395,8 +2395,7 @@ fn parse_u64(bytes: &[u8]) -> Result<u64, VersionParseError> {
 }
 
 /// The minimum version that can be represented by a [`Version`]: `0a0.dev0`.
-pub static MIN_VERSION: LazyLock<Version> =
-    LazyLock::new(|| Version::from_str("0a0.dev0").unwrap());
+pub static MIN_VERSION: Lazy<Version> = Lazy::new(|| Version::from_str("0a0.dev0").unwrap());
 
 #[cfg(test)]
 mod tests;
