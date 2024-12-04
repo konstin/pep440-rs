@@ -1,3 +1,7 @@
+# 0.7.3
+
+* Use once_cell to lower MSRV
+
 # 0.7.2
 
 * Add optional conversion to [version-ranges](https://crates.io/crates/version-ranges).
