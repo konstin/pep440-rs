@@ -16,7 +16,7 @@ crate-type = ["rlib", "cdylib"]
 [dependencies]
 once_cell = { version = "1.20.2" }
 serde = { version = "1.0.210", features = ["derive"] }
-rkyv = { version = "0.8.9", optional = true }
+rkyv = { version = "0.8.10", optional = true }
 tracing = { version = "0.1.40", optional = true }
 unicode-width = { version = "0.2.0" }
 unscanny = { version = "0.1.0" }
