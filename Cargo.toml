@@ -24,4 +24,4 @@ unscanny = { version = "0.1.0" }
 version-ranges = { version = "0.1.1", optional = true }
 
 [dev-dependencies]
-indoc = { version = "2.0.5" }
+indoc = { version = "2.0.7" }
