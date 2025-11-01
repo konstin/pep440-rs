@@ -18,7 +18,7 @@ once_cell = { version = "1.20.3" }
 serde = { version = "1.0.218", features = ["derive"] }
 rkyv = { version = "0.8.10", optional = true }
 tracing = { version = "0.1.40", optional = true }
-unicode-width = { version = "0.2.0" }
+unicode-width = { version = "0.2.2" }
 unscanny = { version = "0.1.0" }
 # Adds conversions from [`VersionSpecifiers`] to [`version_ranges::Ranges`]
 version-ranges = { version = "0.1.1", optional = true }
