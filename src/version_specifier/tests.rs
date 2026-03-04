@@ -946,3 +946,37 @@ fn error_message_version_specifier_parse_error() {
         "The ~= operator requires at least two segments in the release version"
     );
 }
+
+/// PEP 440: "The exclusive ordered comparison <V MUST NOT match a pre-release
+/// of the specified version unless the specified version is itself a pre-release."
+///
+/// When the specifier bound is itself a pre-release (e.g., `<1.1a1.dev147`),
+/// other pre-release versions that are strictly less should still match.
+#[test]
+fn test_less_than_with_prerelease_specifier() {
+    let spec = VersionSpecifier::from_str("<1.1a1.dev147").unwrap();
+
+    // 1.1a1.dev144 < 1.1a1.dev147, and specifier is a pre-release, so should match.
+    assert!(spec.contains(&Version::from_str("1.1a1.dev144").unwrap()));
+
+    // 1.1a1.dev147 is not less than itself.
+    assert!(!spec.contains(&Version::from_str("1.1a1.dev147").unwrap()));
+
+    // 1.1a1.dev149 > 1.1a1.dev147, should not match.
+    assert!(!spec.contains(&Version::from_str("1.1a1.dev149").unwrap()));
+
+    // 1.0.dev8 < 1.1a1.dev147, should match.
+    assert!(spec.contains(&Version::from_str("1.0.dev8").unwrap()));
+}
+
+/// Combined specifiers with pre-release dev versions.
+#[test]
+fn test_specifiers_with_prerelease_dev_range() {
+    let specs = VersionSpecifiers::from_str(">=1.1a1.dev144,<1.1a1.dev147").unwrap();
+
+    assert!(!specs.contains(&Version::from_str("1.0.dev8").unwrap()));
+    assert!(!specs.contains(&Version::from_str("1.1a1.dev143").unwrap()));
+    assert!(specs.contains(&Version::from_str("1.1a1.dev144").unwrap()));
+    assert!(!specs.contains(&Version::from_str("1.1a1.dev147").unwrap()));
+    assert!(!specs.contains(&Version::from_str("1.1a1.dev149").unwrap()));
+}

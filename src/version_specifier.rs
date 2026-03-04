@@ -532,6 +532,7 @@ impl VersionSpecifier {
                 Self::less_than(&this, &other)
                     && !(version::compare_release(this.release(), other.release())
                         == Ordering::Equal
+                        && !this.any_prerelease()
                         && other.any_prerelease())
             }
             Operator::LessThanEqual => Self::less_than(&this, &other) || other <= this,
