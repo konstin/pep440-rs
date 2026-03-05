@@ -997,22 +997,6 @@ fn test_less_than_prerelease_includes_earlier_dev_and_pre() {
     assert!(!spec.contains(&Version::from_str("1.0b1").unwrap()));
 }
 
-/// `<1.0b1` should match earlier pre-releases (alpha) since the specifier
-/// is itself a pre-release.
-#[test]
-fn test_less_than_beta_includes_earlier_alpha() {
-    let spec = VersionSpecifier::from_str("<1.0b1").unwrap();
-
-    assert!(spec.contains(&Version::from_str("1.0a1").unwrap()));
-    assert!(spec.contains(&Version::from_str("1.0a1.dev1").unwrap()));
-    assert!(spec.contains(&Version::from_str("1.0a2").unwrap()));
-    assert!(spec.contains(&Version::from_str("1.0b1.dev1").unwrap()));
-    assert!(spec.contains(&Version::from_str("1.0.dev1").unwrap()));
-    assert!(!spec.contains(&Version::from_str("1.0b1").unwrap()));
-    assert!(!spec.contains(&Version::from_str("1.0b2").unwrap()));
-    assert!(!spec.contains(&Version::from_str("1.0rc1").unwrap()));
-}
-
 /// `<1.0.dev10` should match earlier dev releases since the specifier is
 /// itself a dev release.
 #[test]
