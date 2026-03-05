@@ -528,13 +528,7 @@ impl VersionSpecifier {
             }
             Operator::GreaterThan => Self::greater_than(&this, &other),
             Operator::GreaterThanEqual => Self::greater_than(&this, &other) || other >= this,
-            Operator::LessThan => {
-                Self::less_than(&this, &other)
-                    && !(version::compare_release(this.release(), other.release())
-                        == Ordering::Equal
-                        && !this.any_prerelease()
-                        && other.any_prerelease())
-            }
+            Operator::LessThan => Self::less_than(&this, &other),
             Operator::LessThanEqual => Self::less_than(&this, &other) || other <= this,
         }
     }
@@ -545,11 +539,17 @@ impl VersionSpecifier {
         }
 
         // This special case is here so that, unless the specifier itself
-        // includes is a pre-release version, that we do not accept pre-release
-        // versions for the version mentioned in the specifier (e.g. <3.1 should
-        // not match 3.1.dev0, but should match 3.0.dev0).
+        // is a pre-release or dev version, we do not accept pre-release or dev
+        // versions for the version mentioned in the specifier.
+        //
+        // - <3.1 should not match 3.1.dev0 or 3.1a1, but should match 3.0.dev0;
+        // - <3.1a1 should match 3.1.dev1
+        //     since the specifier is itself a pre-release and dev < alpha.
+        //
+        // The ordering is dev < alpha < beta < rc < final:
+        // https://packaging.python.org/en/latest/specifications/version-specifiers/#summary-of-permitted-suffixes-and-relative-ordering
         if !this.any_prerelease()
-            && other.is_pre()
+            && other.any_prerelease()
             && version::compare_release(this.release(), other.release()) == Ordering::Equal
         {
             return false;
