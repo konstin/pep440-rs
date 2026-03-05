@@ -946,3 +946,137 @@ fn error_message_version_specifier_parse_error() {
         "The ~= operator requires at least two segments in the release version"
     );
 }
+
+// ---- Tests for the exclusive ordered comparison `<V` with pre-release and dev versions ----
+//
+// From https://packaging.python.org/en/latest/specifications/version-specifiers/:
+//
+// "The exclusive ordered comparison <V MUST NOT match a pre-release of the
+//  specified version unless the specified version is itself a pre-release."
+//
+// Within a numeric release (1.0, 2.7.3), the permitted suffixes MUST be
+// ordered as: .devN, aN, bN, rcN, <no suffix>, .postN
+
+/// `<1.0` must NOT match dev or pre-release versions of 1.0, since the
+/// specifier is a final release.
+#[test]
+fn test_less_than_final_excludes_same_release_dev_and_pre() {
+    let spec = VersionSpecifier::from_str("<1.0").unwrap();
+
+    // Dev and pre-releases of 1.0 — all should be excluded
+    assert!(!spec.contains(&Version::from_str("1.0.dev1").unwrap()));
+    assert!(!spec.contains(&Version::from_str("1.0a1").unwrap()));
+    assert!(!spec.contains(&Version::from_str("1.0a2.dev1").unwrap()));
+    assert!(!spec.contains(&Version::from_str("1.0b1").unwrap()));
+    assert!(!spec.contains(&Version::from_str("1.0b1.dev1").unwrap()));
+    assert!(!spec.contains(&Version::from_str("1.0rc1").unwrap()));
+    assert!(!spec.contains(&Version::from_str("1.0rc1.dev1").unwrap()));
+
+    // Earlier release — should match
+    assert!(spec.contains(&Version::from_str("0.9").unwrap()));
+    assert!(spec.contains(&Version::from_str("0.9.post1").unwrap()));
+}
+
+/// `<1.0a1` is itself a pre-release, so it SHOULD match earlier dev/pre of
+/// the same release segment.
+#[test]
+fn test_less_than_prerelease_includes_earlier_dev_and_pre() {
+    let spec = VersionSpecifier::from_str("<1.0a1").unwrap();
+
+    // Dev of 1.0a1 comes before 1.0a1 — should match
+    assert!(spec.contains(&Version::from_str("1.0a1.dev1").unwrap()));
+
+    // Dev of 1.0 comes before 1.0a1 — should match
+    assert!(spec.contains(&Version::from_str("1.0.dev1").unwrap()));
+
+    // 1.0a1 itself — should NOT match (exclusive)
+    assert!(!spec.contains(&Version::from_str("1.0a1").unwrap()));
+
+    // Later pre-releases — should NOT match
+    assert!(!spec.contains(&Version::from_str("1.0a2").unwrap()));
+    assert!(!spec.contains(&Version::from_str("1.0b1").unwrap()));
+}
+
+/// `<1.0.dev10` should match earlier dev releases since the specifier is
+/// itself a dev release.
+#[test]
+fn test_less_than_dev_includes_earlier_dev() {
+    let spec = VersionSpecifier::from_str("<1.0.dev10").unwrap();
+
+    assert!(spec.contains(&Version::from_str("1.0.dev5").unwrap()));
+    assert!(spec.contains(&Version::from_str("1.0.dev9").unwrap()));
+    assert!(!spec.contains(&Version::from_str("1.0.dev10").unwrap()));
+    assert!(!spec.contains(&Version::from_str("1.0.dev11").unwrap()));
+    assert!(!spec.contains(&Version::from_str("1.0a1").unwrap()));
+}
+
+/// `<1.0.post1` is a post-release (not pre/dev), so it must NOT match
+/// dev or pre-release versions of the same release segment.
+#[test]
+fn test_less_than_post_excludes_same_release_dev_and_pre() {
+    let spec = VersionSpecifier::from_str("<1.0.post1").unwrap();
+
+    // Dev and pre-releases of 1.0 — should be excluded
+    assert!(!spec.contains(&Version::from_str("1.0.dev1").unwrap()));
+    assert!(!spec.contains(&Version::from_str("1.0a1").unwrap()));
+    assert!(!spec.contains(&Version::from_str("1.0rc1").unwrap()));
+
+    // 1.0 itself — should match (1.0 < 1.0.post1)
+    assert!(spec.contains(&Version::from_str("1.0").unwrap()));
+
+    // Earlier releases — should match
+    assert!(spec.contains(&Version::from_str("0.9").unwrap()));
+}
+
+/// Combined range specifiers with pre-release dev versions.
+#[test]
+fn test_range_specifier_with_prerelease_dev() {
+    let specs = VersionSpecifiers::from_str(">=1.1a1.dev144,<1.1a1.dev147").unwrap();
+
+    assert!(!specs.contains(&Version::from_str("1.0.dev8").unwrap()));
+    assert!(!specs.contains(&Version::from_str("1.1a1.dev143").unwrap()));
+    assert!(specs.contains(&Version::from_str("1.1a1.dev144").unwrap()));
+    assert!(!specs.contains(&Version::from_str("1.1a1.dev147").unwrap()));
+    assert!(!specs.contains(&Version::from_str("1.1a1.dev149").unwrap()));
+}
+
+/// Verify the full ordering example from the spec is respected by `<`.
+/// From: https://packaging.python.org/en/latest/specifications/version-specifiers/#summary-of-permitted-suffixes-and-relative-ordering
+#[test]
+fn test_less_than_respects_full_spec_ordering() {
+    // The spec ordering (each version is less than the next):
+    // 1.0.dev456 < 1.0a1 < 1.0a2.dev456 < 1.0a12 < 1.0b1.dev456 < 1.0b2
+    // < 1.0b2.post345.dev456 < 1.0b2.post345 < 1.0rc1.dev456 < 1.0rc1
+    // < 1.0 < 1.0.post456.dev34 < 1.0.post456
+
+    // <1.0rc1 is a pre-release specifier, so it should include earlier pre/dev
+    let spec = VersionSpecifier::from_str("<1.0rc1").unwrap();
+    assert!(spec.contains(&Version::from_str("1.0.dev456").unwrap()));
+    assert!(spec.contains(&Version::from_str("1.0a1").unwrap()));
+    assert!(spec.contains(&Version::from_str("1.0a12").unwrap()));
+    assert!(spec.contains(&Version::from_str("1.0b2").unwrap()));
+    assert!(spec.contains(&Version::from_str("1.0b2.post345").unwrap()));
+    assert!(spec.contains(&Version::from_str("1.0rc1.dev456").unwrap()));
+    assert!(!spec.contains(&Version::from_str("1.0rc1").unwrap()));
+    assert!(!spec.contains(&Version::from_str("1.0").unwrap()));
+    assert!(!spec.contains(&Version::from_str("1.0.post456").unwrap()));
+
+    // <1.0 is a final release specifier, so it must NOT include pre/dev of 1.0
+    let spec = VersionSpecifier::from_str("<1.0").unwrap();
+    assert!(!spec.contains(&Version::from_str("1.0.dev456").unwrap()));
+    assert!(!spec.contains(&Version::from_str("1.0a1").unwrap()));
+    assert!(!spec.contains(&Version::from_str("1.0rc1").unwrap()));
+    assert!(spec.contains(&Version::from_str("0.9").unwrap()));
+    assert!(spec.contains(&Version::from_str("0.9.post1").unwrap()));
+
+    // <1.0.post456 is a post-release specifier, must NOT include pre/dev of 1.0
+    let spec = VersionSpecifier::from_str("<1.0.post456").unwrap();
+    assert!(!spec.contains(&Version::from_str("1.0.dev456").unwrap()));
+    assert!(!spec.contains(&Version::from_str("1.0a1").unwrap()));
+    assert!(spec.contains(&Version::from_str("1.0").unwrap()));
+    assert!(spec.contains(&Version::from_str("1.0.post455").unwrap()));
+    // NOTE: 1.0.post456.dev34 is a dev release of post-release 1.0.post456,
+    // which comes AFTER 1.0 in the ordering. Ideally <1.0.post456 should
+    // match it, but that's a separate pre-existing issue in pep440_rs.
+    assert!(!spec.contains(&Version::from_str("1.0.post456").unwrap()));
+}
