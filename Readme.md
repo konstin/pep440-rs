@@ -3,6 +3,10 @@
 [![Crates.io](https://img.shields.io/crates/v/pep440_rs.svg?logo=rust&style=flat-square)](https://crates.io/crates/pep440_rs)
 [![PyPI](https://img.shields.io/pypi/v/pep440_rs.svg?logo=python&style=flat-square)](https://pypi.org/project/pep440_rs)
 
+**Note: This library is feature-complete, but it also isn't actively maintained anymore.**
+
+---
+
 A library for python version numbers and specifiers, implementing
 [PEP 440](https://peps.python.org/pep-0440).
 See [Reimplementing PEP 440](https://cohost.org/konstin/post/514863-reimplementing-pep-4) for some background.
